@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Contador</title>
+  <style>
+    body {
+      background-color: #6b7a3a;
+      color: #f0f0f0;
+      font-family: sans-serif;
+    }
+    button {
+      background-color: #333;
+      color: #f0f0f0;
+      border: 1px solid #666;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Contador</h1>
+  <p id="valor">0</p>
+  <button id="menos">-</button>
+  <button id="mas">+</button>
+  <button id="reset">Reset</button>
+
+  <script>
+    let cuenta = 0;
+    const valor = document.getElementById('valor');
+
+    function pintar() {
+      valor.textContent = cuenta;
+    }
+
+    document.getElementById('mas').onclick = () => { cuenta++; pintar(); };
+    document.getElementById('menos').onclick = () => { cuenta--; pintar(); };
+    document.getElementById('reset').onclick = () => { cuenta = 0; pintar(); };
+  </script>
+</body>
+</html>
