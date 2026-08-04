@@ -80,6 +80,10 @@ const ESCUDO_GRACIA   = 1;    // s de invencibilidad tras absorber
 const ESCUDO_MAX      = 3;    // tope de cargas acumuladas
 const ESCUDO_RADIO    = 22;   // px, algo mayor que ship.radius
 
+// Power-up de cámara lenta
+const SLOW_DURACION = 6;     // s de efecto
+const SLOW_FACTOR   = 0.5;   // multiplicador de dt aplicado a los asteroides
+
 class Asteroid {
   constructor(x, y, size = 3) {
     this.x    = x;
@@ -258,11 +262,12 @@ class Particle {
   }
 }
 
-// ── PowerUp (disparo triple) ──────────────────────────────────────────────────
+// ── PowerUp (disparo triple / cámara lenta) ───────────────────────────────────
 class PowerUp {
-  constructor(x, y) {
+  constructor(x, y, type) {
     this.x = x;
     this.y = y;
+    this.type = type;   // 'triple' | 'slow'
     const angle = rand(0, Math.PI * 2);
     const speed = rand(15, 30);
     this.vx = Math.cos(angle) * speed;
@@ -304,12 +309,26 @@ class PowerUp {
     ctx.closePath();
     ctx.stroke();
 
-    // Tres trazos en abanico (símbolo del disparo triple)
-    for (const a of [-TRIPLE_SPREAD * 2, 0, TRIPLE_SPREAD * 2]) {
+    if (this.type === 'slow') {
+      // Reloj (símbolo de la cámara lenta)
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * 2, Math.sin(a) * 2);
-      ctx.lineTo(Math.cos(a) * 8, Math.sin(a) * 8);
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
       ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -5);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(4, 0);
+      ctx.stroke();
+    } else {
+      // Tres trazos en abanico (símbolo del disparo triple)
+      for (const a of [-TRIPLE_SPREAD * 2, 0, TRIPLE_SPREAD * 2]) {
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 2, Math.sin(a) * 2);
+        ctx.lineTo(Math.cos(a) * 8, Math.sin(a) * 8);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
@@ -320,6 +339,7 @@ class PowerUp {
 let ship, bullets, asteroids, particles, powerups;
 let score, lives, level;
 let tripleTimer;     // s restantes de disparo triple
+let slowTimer;       // s restantes de cámara lenta
 let escudoTimer;     // s restantes de escudo activo
 let escudoCargas;    // cargas de escudo disponibles (0..ESCUDO_MAX)
 let powerupSpawned;  // el power-up solo aparece una vez por partida
@@ -348,6 +368,7 @@ function initGame() {
   lives  = 3;
   level  = 1;
   tripleTimer    = 0;
+  slowTimer      = 0;
   escudoTimer    = 0;
   escudoCargas   = 0;
   powerupSpawned = false;
@@ -373,6 +394,7 @@ function killShip() {
   explode(ship.x, ship.y, 14);
   ship.dead = true;
   tripleTimer = 0;   // el disparo triple se pierde al morir
+  slowTimer   = 0;   // la cámara lenta también
   escudoTimer = 0;   // el escudo activo también (las cargas se conservan)
   lives--;
   if (lives <= 0) {
@@ -416,10 +438,13 @@ function update(dt) {
 
   if (tripleTimer > 0) tripleTimer -= dt;
   if (escudoTimer > 0) escudoTimer -= dt;
+  if (slowTimer   > 0) slowTimer   -= dt;
 
   ship.update(dt);
   bullets.forEach(b => b.update(dt));
-  asteroids.forEach(a => a.update(dt));
+  // Cámara lenta: solo los asteroides avanzan con dt escalado
+  const dtAst = slowTimer > 0 ? dt * SLOW_FACTOR : dt;
+  asteroids.forEach(a => a.update(dtAst));
   particles.forEach(p => p.update(dt));
   powerups.forEach(p => p.update(dt));
 
@@ -450,7 +475,8 @@ function update(dt) {
   if (!powerupSpawned && lastKill) {
     if (Math.random() < POWERUP_CHANCE || asteroids.length <= 2) {
       powerupSpawned = true;
-      powerups.push(new PowerUp(lastKill.x, lastKill.y));
+      const tipo = Math.random() < 0.5 ? 'triple' : 'slow';
+      powerups.push(new PowerUp(lastKill.x, lastKill.y, tipo));
     }
   }
 
@@ -459,7 +485,8 @@ function update(dt) {
     for (const p of powerups) {
       if (dist(ship, p) < ship.radius + p.radius) {
         p.dead = true;
-        tripleTimer = TRIPLE_DURACION;
+        if (p.type === 'slow') slowTimer   = SLOW_DURACION;
+        else                   tripleTimer = TRIPLE_DURACION;
       }
     }
     powerups = powerups.filter(p => !p.dead);
@@ -541,6 +568,12 @@ function drawHUD() {
   if (tripleTimer > 0) {
     ctx.font = '13px monospace';
     ctx.fillText(`TRIPLE ${tripleTimer.toFixed(1)}`, W / 2, 46);
+    ctx.font = '15px monospace';
+  }
+
+  if (slowTimer > 0) {
+    ctx.font = '13px monospace';
+    ctx.fillText(`LENTO ${slowTimer.toFixed(1)}`, W / 2, 66);
     ctx.font = '15px monospace';
   }
 
