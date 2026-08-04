@@ -84,6 +84,12 @@ const ESCUDO_RADIO    = 22;   // px, algo mayor que ship.radius
 const SLOW_DURACION = 6;     // s de efecto
 const SLOW_FACTOR   = 0.5;   // multiplicador de dt aplicado a los asteroides
 
+// Bomba Nova (ítem escaso, activable con B)
+const NOVA_CHANCE = 0.18;  // prob. de que el power-up soltado sea una bomba
+const NOVA_MAX    = 1;     // tope de bombas guardadas: un solo uso
+const NOVA_FLASH  = 0.6;   // s que dura la onda expansiva en pantalla
+const NOVA_RADIO  = 620;   // px que alcanza la onda al final del flash
+
 class Asteroid {
   constructor(x, y, size = 3) {
     this.x    = x;
@@ -262,12 +268,12 @@ class Particle {
   }
 }
 
-// ── PowerUp (disparo triple / cámara lenta) ───────────────────────────────────
+// ── PowerUp (disparo triple / cámara lenta / bomba nova) ──────────────────────
 class PowerUp {
   constructor(x, y, type) {
     this.x = x;
     this.y = y;
-    this.type = type;   // 'triple' | 'slow'
+    this.type = type;   // 'triple' | 'slow' | 'nova'
     const angle = rand(0, Math.PI * 2);
     const speed = rand(15, 30);
     this.vx = Math.cos(angle) * speed;
@@ -321,6 +327,15 @@ class PowerUp {
       ctx.moveTo(0, 0);
       ctx.lineTo(4, 0);
       ctx.stroke();
+    } else if (this.type === 'nova') {
+      // Estrella de ocho rayos (símbolo de la bomba nova)
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 2.5, Math.sin(a) * 2.5);
+        ctx.lineTo(Math.cos(a) * 8.5, Math.sin(a) * 8.5);
+        ctx.stroke();
+      }
     } else {
       // Tres trazos en abanico (símbolo del disparo triple)
       for (const a of [-TRIPLE_SPREAD * 2, 0, TRIPLE_SPREAD * 2]) {
@@ -342,6 +357,8 @@ let tripleTimer;     // s restantes de disparo triple
 let slowTimer;       // s restantes de cámara lenta
 let escudoTimer;     // s restantes de escudo activo
 let escudoCargas;    // cargas de escudo disponibles (0..ESCUDO_MAX)
+let novaCargas;      // bombas nova guardadas (0..NOVA_MAX)
+let novaTimer;       // s restantes de la onda expansiva (solo efecto visual)
 let powerupSpawned;  // el power-up solo aparece una vez por partida
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
@@ -371,6 +388,8 @@ function initGame() {
   slowTimer      = 0;
   escudoTimer    = 0;
   escudoCargas   = 0;
+  novaCargas     = 0;
+  novaTimer      = 0;
   powerupSpawned = false;
   state  = 'playing';
   spawnAsteroids(4);
@@ -390,6 +409,19 @@ function explode(x, y, count = 8) {
   for (let i = 0; i < count; i++) particles.push(new Particle(x, y));
 }
 
+// Gasta una bomba nova: pulveriza todos los asteroides presentes en ese
+// instante (sin fragmentos, pero sí puntos) y lanza la onda expansiva.
+function detonarNova() {
+  novaCargas--;
+  novaTimer = NOVA_FLASH;
+  for (const a of asteroids) {
+    score += POINTS[a.size];
+    explode(a.x, a.y, a.size * 5);
+    a.dead = true;
+  }
+  asteroids = asteroids.filter(a => !a.dead);
+}
+
 function killShip() {
   explode(ship.x, ship.y, 14);
   ship.dead = true;
@@ -407,6 +439,8 @@ function killShip() {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
+  if (novaTimer > 0) novaTimer -= dt;   // la onda se apaga en cualquier estado
+
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
     particles.forEach(p => p.update(dt));
@@ -435,6 +469,9 @@ function update(dt) {
     escudoCargas--;
     escudoTimer = ESCUDO_DURACION;
   }
+
+  // Detonar la bomba nova (un solo uso)
+  if (pressed('KeyB') && novaCargas > 0 && !ship.dead) detonarNova();
 
   if (tripleTimer > 0) tripleTimer -= dt;
   if (escudoTimer > 0) escudoTimer -= dt;
@@ -475,7 +512,11 @@ function update(dt) {
   if (!powerupSpawned && lastKill) {
     if (Math.random() < POWERUP_CHANCE || asteroids.length <= 2) {
       powerupSpawned = true;
-      const tipo = Math.random() < 0.5 ? 'triple' : 'slow';
+      // La bomba es escasa: solo sale si no llevas ya una guardada
+      const r = Math.random();
+      let tipo;
+      if (r < NOVA_CHANCE && novaCargas < NOVA_MAX) tipo = 'nova';
+      else tipo = r < (1 + NOVA_CHANCE) / 2 ? 'triple' : 'slow';
       powerups.push(new PowerUp(lastKill.x, lastKill.y, tipo));
     }
   }
@@ -485,8 +526,9 @@ function update(dt) {
     for (const p of powerups) {
       if (dist(ship, p) < ship.radius + p.radius) {
         p.dead = true;
-        if (p.type === 'slow') slowTimer   = SLOW_DURACION;
-        else                   tripleTimer = TRIPLE_DURACION;
+        if      (p.type === 'slow') slowTimer   = SLOW_DURACION;
+        else if (p.type === 'nova') novaCargas  = Math.min(novaCargas + 1, NOVA_MAX);
+        else                        tripleTimer = TRIPLE_DURACION;
       }
     }
     powerups = powerups.filter(p => !p.dead);
@@ -550,6 +592,23 @@ function drawEscudo() {
   ctx.restore();
 }
 
+// Onda expansiva de la bomba nova: anillo que crece y se desvanece.
+function drawNova() {
+  if (novaTimer <= 0) return;
+  const t = 1 - novaTimer / NOVA_FLASH;   // 0 → 1 a lo largo del flash
+
+  ctx.save();
+  ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - t) * 0.9})`;
+  ctx.lineWidth   = 3;
+  ctx.beginPath();
+  ctx.arc(ship.x, ship.y, t * NOVA_RADIO, 0, Math.PI * 2);
+  ctx.stroke();
+  // Destello blanco sobre toda la pantalla al inicio
+  ctx.fillStyle = `rgba(255, 255, 255, ${(1 - t) * 0.18})`;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
 function drawHUD() {
   ctx.fillStyle = '#fff';
   ctx.font = '15px monospace';
@@ -560,6 +619,7 @@ function drawHUD() {
   ctx.font = '13px monospace';
   if (escudoTimer > 0) ctx.fillText(`ESCUDO ${escudoTimer.toFixed(1)}`, 14, 46);
   else                 ctx.fillText(`ESCUDO x${escudoCargas}`, 14, 46);
+  if (novaCargas > 0)  ctx.fillText(`NOVA x${novaCargas}  [B]`, 14, 64);
   ctx.font = '15px monospace';
 
   ctx.textAlign = 'center';
@@ -602,6 +662,7 @@ function draw() {
   bullets.forEach(b => b.draw());
   ship.draw();
   drawEscudo();
+  drawNova();
 
   drawHUD();
 
