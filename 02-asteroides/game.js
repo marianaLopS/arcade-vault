@@ -90,6 +90,12 @@ const NOVA_MAX    = 1;     // tope de bombas guardadas: un solo uso
 const NOVA_FLASH  = 0.6;   // s que dura la onda expansiva en pantalla
 const NOVA_RADIO  = 620;   // px que alcanza la onda al final del flash
 
+// Hiperpropulsión (mantener Shift)
+const HIPER_RESERVA = 8;    // s de reserva a tope
+const HIPER_RECARGA = 0.5;  // s recuperados por segundo sin usar
+const HIPER_FACTOR  = 2.5;  // multiplicador de aceleración (y de velocidad máxima, con el mismo DRAG)
+const HIPER_MIN     = 0.6;  // s mínimos para (re)activarla: evita parpadeo con la reserva a cero
+
 class Asteroid {
   constructor(x, y, size = 3) {
     this.x    = x;
@@ -177,8 +183,9 @@ class Ship {
 
     this.thrusting = !!keys['ArrowUp'];
     if (this.thrusting) {
-      this.vx += Math.cos(this.angle) * THRUST * dt;
-      this.vy += Math.sin(this.angle) * THRUST * dt;
+      const thrust = hiperActivo ? THRUST * HIPER_FACTOR : THRUST;
+      this.vx += Math.cos(this.angle) * thrust * dt;
+      this.vy += Math.sin(this.angle) * thrust * dt;
     }
 
     this.vx *= DRAG;
@@ -222,13 +229,14 @@ class Ship {
     ctx.closePath();
     ctx.stroke();
 
-    // Llama del propulsor
-    if (this.thrusting && Math.random() > 0.35) {
+    // Llama del propulsor: más larga y azulada con hiperpropulsión
+    if (this.thrusting && (hiperActivo || Math.random() > 0.35)) {
+      const largo = hiperActivo ? rand(16, 30) : rand(6, 14);
       ctx.beginPath();
       ctx.moveTo(-8, -4);
-      ctx.lineTo(-8 - rand(6, 14), 0);
+      ctx.lineTo(-8 - largo, 0);
       ctx.lineTo(-8,  4);
-      ctx.strokeStyle = 'rgba(255, 130, 0, 0.85)';
+      ctx.strokeStyle = hiperActivo ? 'rgba(120, 200, 255, 0.9)' : 'rgba(255, 130, 0, 0.85)';
       ctx.stroke();
     }
 
@@ -359,6 +367,8 @@ let escudoTimer;     // s restantes de escudo activo
 let escudoCargas;    // cargas de escudo disponibles (0..ESCUDO_MAX)
 let novaCargas;      // bombas nova guardadas (0..NOVA_MAX)
 let novaTimer;       // s restantes de la onda expansiva (solo efecto visual)
+let hiperReserva;    // s de hiperpropulsión disponibles (0..HIPER_RESERVA)
+let hiperActivo;     // true mientras Shift la mantiene encendida
 let powerupSpawned;  // el power-up solo aparece una vez por partida
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
@@ -390,6 +400,8 @@ function initGame() {
   escudoCargas   = 0;
   novaCargas     = 0;
   novaTimer      = 0;
+  hiperReserva   = HIPER_RESERVA;
+  hiperActivo    = false;
   powerupSpawned = false;
   state  = 'playing';
   spawnAsteroids(4);
@@ -428,6 +440,8 @@ function killShip() {
   tripleTimer = 0;   // el disparo triple se pierde al morir
   slowTimer   = 0;   // la cámara lenta también
   escudoTimer = 0;   // el escudo activo también (las cargas se conservan)
+  hiperActivo  = false;
+  hiperReserva = HIPER_RESERVA;   // se reaparece con la reserva llena
   lives--;
   if (lives <= 0) {
     state = 'gameover';
@@ -476,6 +490,14 @@ function update(dt) {
   if (tripleTimer > 0) tripleTimer -= dt;
   if (escudoTimer > 0) escudoTimer -= dt;
   if (slowTimer   > 0) slowTimer   -= dt;
+
+  // Hiperpropulsión: se drena mientras Shift esté pulsado, se recarga al soltar
+  const quiereHiper = keys['ShiftLeft'] || keys['ShiftRight'];
+  if (ship.dead || !quiereHiper || hiperReserva <= 0)   hiperActivo = false;
+  else if (hiperActivo || hiperReserva >= HIPER_MIN)    hiperActivo = true;
+
+  if (hiperActivo) hiperReserva = Math.max(0, hiperReserva - dt);
+  else             hiperReserva = Math.min(HIPER_RESERVA, hiperReserva + HIPER_RECARGA * dt);
 
   ship.update(dt);
   bullets.forEach(b => b.update(dt));
@@ -640,6 +662,18 @@ function drawHUD() {
   for (let i = 0; i < lives; i++)
     drawLifeIcon(W - 16 - i * 22, 18);
 
+  // Barra de reserva de hiperpropulsión (abajo a la izquierda)
+  const bx = 14, by = H - 22, bw = 110, bh = 8;
+  ctx.textAlign = 'left';
+  ctx.font      = '12px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillText('HIPER [SHIFT]', bx, by - 6);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth   = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = hiperActivo ? 'rgba(120, 200, 255, 0.9)' : 'rgba(255,255,255,0.75)';
+  ctx.fillRect(bx, by, bw * (hiperReserva / HIPER_RESERVA), bh);
+  ctx.font = '15px monospace';
 }
 
 function drawOverlay(title, sub) {
