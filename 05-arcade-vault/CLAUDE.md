@@ -25,6 +25,10 @@ npm run lint    # eslint (flat config, sin argumentos)
 
 No hay framework de tests configurado; si se añade uno, documentarlo aquí.
 
+
+## skills
+usa siempre /fronted-desing para diseñar la interfaz del usuario
+
 ## Stack y convenciones
 
 - **Next.js 16 (App Router)** + React 19. Ver `AGENTS.md`: esta versión tiene breaking
