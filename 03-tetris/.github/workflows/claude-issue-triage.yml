@@ -1,0 +1,124 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+jobs:
+  triage:
+    # No procesar issues de bots, ni ediciones que no tocaron titulo/cuerpo
+    if: |
+      github.event.issue.user.type != 'Bot' &&
+      github.actor != 'github-actions[bot]' &&
+      (github.event.action != 'edited' ||
+       github.event.changes.body != null ||
+       github.event.changes.title != null)
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Asegurar labels de dominio
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          create() {
+            gh label create "$1" --color "$2" --description "$3" --force
+          }
+          create "area:gameplay"  "1d76db" "Logica de juego: colisiones, rotacion, bloqueo, spawn"
+          create "area:rendering" "5319e7" "Canvas, dibujo, ghost, grid"
+          create "area:controls"  "0e8a16" "Teclado, pausa, input"
+          create "area:scoring"   "fbca04" "Puntaje, lineas, niveles, velocidad"
+          create "area:ui"        "c2e0c6" "HTML/CSS, textos visibles"
+          create "priority:high"   "b60205" "Bloquea el juego o lo rompe"
+          create "priority:medium" "fbca04" "Importante pero no bloqueante"
+          create "priority:low"    "c5def5" "Mejora menor o cosmetica"
+          create "needs-info"      "d876e3" "Falta informacion para diagnosticar"
+
+      - name: Analizar issue con Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh api:*),Read,Grep,Glob,Write"'
+          prompt: |
+            Eres el triador de issues del repositorio ${{ github.repository }}.
+            Responde y escribe SIEMPRE en espanol.
+
+            Analiza el issue #${{ github.event.issue.number }}. Leelo con:
+            `gh issue view ${{ github.event.issue.number }} --json number,title,body,labels,author`
+
+            ## Contexto del proyecto
+            Tetris en JavaScript vanilla sobre HTML5 Canvas. Sin dependencias, sin
+            build, sin tests, sin linter. Solo tres fuentes: `index.html`, `style.css`
+            y `game.js`. La UI esta en espanol.
+            ANTES de diagnosticar, lee `CLAUDE.md` (arquitectura y gotchas) y el codigo
+            relevante. No inventes nombres de archivos ni de funciones: verificalos.
+
+            ## Tarea 1 - Etiquetar
+            Lista los labels disponibles con `gh label list` y usa UNICAMENTE labels que
+            ya existan. Elige:
+            - exactamente UN label de tipo: `bug`, `enhancement`, `documentation` o `question`
+            - uno o mas labels `area:*` segun las partes del codigo implicadas
+            - exactamente UN label `priority:*`
+            - ademas `needs-info` si el issue no aporta lo minimo para diagnosticar
+              (sin sintoma concreto, sin pasos, sin descripcion util)
+
+            Aplicalos con:
+            `gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2,..."`
+
+            ## Tarea 2 - Diagnostico
+            El comentario debe estar escrito en Markdown valido de GitHub (GFM), de
+            modo que GitHub lo renderice correctamente: encabezados con `##`, listas
+            con `-`, checkboxes con `- [ ]`, rutas/funciones e identificadores entre
+            backticks y bloques de codigo con triple backtick indicando el lenguaje
+            (```js). No uses HTML crudo salvo el marcador oculto, ni escapes los
+            backticks. Respeta las lineas en blanco entre secciones para que los
+            bloques se separen bien.
+
+            Escribe un comentario con EXACTAMENTE esta estructura, empezando por el
+            marcador oculto en la primera linea:
+
+            ```
+            <!-- claude-triage -->
+            ## Diagnostico
+            Que ocurre y por que. Causa raiz probable.
+
+            ## Archivos y funciones afectados
+            Rutas concretas y funciones, p.ej. `game.js:lockPiece`, verificadas leyendo
+            el codigo.
+
+            ## Plan de implementacion
+            Pasos numerados y accionables.
+
+            ## Criterios de aceptacion
+            - [ ] Lista verificable manualmente (el repo no tiene tests).
+            ```
+
+            Si aplicaste `needs-info`, sustituye el contenido por una lista concreta de
+            que informacion falta, manteniendo el marcador y el encabezado `## Diagnostico`.
+
+            ## Tarea 3 - Publicar como comentario UNICO
+            Guarda el texto en un archivo temporal (por ejemplo `/tmp/triage.md`) y luego:
+
+            1. Busca un comentario previo propio con el marcador:
+               `gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq '.[] | select(.body | startswith("<!-- claude-triage -->")) | .id'`
+            2. Si devuelve un id, ACTUALIZA ese comentario (no crees uno nuevo):
+               `gh api --method PATCH repos/${{ github.repository }}/issues/comments/<id> -F body=@/tmp/triage.md`
+            3. Si no hay ninguno, crealo:
+               `gh issue comment ${{ github.event.issue.number }} --body-file /tmp/triage.md`
+
+            ## Restricciones
+            - NO modifiques codigo del juego, no crees ramas ni pull requests.
+            - NO cierres ni reabras el issue.
+            - Solo etiquetar y dejar/actualizar ese unico comentario.

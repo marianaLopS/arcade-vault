@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrapper">
+    <h1 class="game-title">TETRIS</h1>
+    <div class="game-container">
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="600"></canvas>
+        <div id="power-toast" class="power-toast hidden">
+          <span class="toast-icon" id="toast-icon">💣</span>
+          <span class="toast-text">
+            <span class="toast-name" id="toast-name"></span>
+            <span class="toast-desc" id="toast-desc"></span>
+          </span>
+        </div>
+      </div>
+
+      <aside class="panel panel-left">
+        <div class="panel-section stats">
+          <div class="stat">
+            <span class="label">SCORE</span>
+            <span class="value" id="score">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">LINES</span>
+            <span class="value" id="lines">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">LEVEL</span>
+            <span class="value" id="level">1</span>
+          </div>
+        </div>
+
+        <div class="panel-section controls">
+          <span class="label">CONTROLS</span>
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> pausa</li>
+          </ul>
+        </div>
+      </aside>
+
+      <aside class="panel panel-right">
+        <div class="panel-section theme-section">
+          <span class="label">TEMA</span>
+          <label class="switch" for="theme-toggle">
+            <input type="checkbox" id="theme-toggle" aria-label="Alternar modo claro/oscuro" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">NEXT</span>
+          <canvas id="next-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section" id="power-section">
+          <span class="label">POWER-UP</span>
+          <span class="power-status" id="power-status">—</span>
+          <span class="power-desc" id="power-desc">Aparece cada 5 líneas</span>
+        </div>
+
+        <div class="panel-section controls">
+          <span class="label">POWER-UPS</span>
+          <ul class="power-legend">
+            <li><span>💣</span> bomba 3×3</li>
+            <li><span>⚡</span> fila + columna</li>
+            <li><span>🎨</span> tinte comodín</li>
+            <li><span>⬇</span> gravedad</li>
+            <li><span>❄</span> congelar 5 s</li>
+          </ul>
+        </div>
+
+        <div class="panel-section controls">
+          <span class="label">PIEZAS RARAS</span>
+          <ul class="power-legend">
+            <li><span>✚</span> pentominó +</li>
+            <li><span>⊔</span> pentominó U</li>
+            <li><span>⅄</span> pentominó Y</li>
+            <li><span>▪</span> 1×1 tras Tetris</li>
+            <li><span>▢</span> 3×3 hueca (reto)</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <div id="overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <p id="overlay-title">GAME OVER</p>
+        <p id="overlay-score"></p>
+        <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
