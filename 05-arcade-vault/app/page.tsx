@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { GAMES, type Game } from "@/lib/games";
-import { FEATURES, type Feature } from "@/lib/home-data";
+import { FEATURES, STATS, TICKER, TOP_TODAY, type Feature } from "@/lib/home-data";
 import { useReveal } from "@/lib/use-reveal";
 
 /** Siluetas pixeladas que flotan de fondo en el hero. Puramente decorativas. */
@@ -271,6 +271,70 @@ export default function HomePage() {
           <Link className="btn lg" href="/biblioteca">
             VER TODOS LOS JUEGOS →
           </Link>
+        </div>
+      </section>
+      {/* BANDA DE ESTADÍSTICAS */}
+      <section className="home-stats reveal">
+        <div className="stats-inner">
+          {STATS.map((st, i) => (
+            <div key={st.u} className="stat-block" style={{ transitionDelay: `${i * 90}ms` }}>
+              <div className="stat-n neon-yellow">{st.n}</div>
+              <div className="stat-u pixel">{st.u}</div>
+              <div className="stat-s">{st.s}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 03 — ACTIVIDAD EN VIVO */}
+      <section className="home-section reveal">
+        <div className="section-head">
+          <div className="kicker pixel neon-yellow">{"// 03"}</div>
+          <h2 className="section-title">ACTIVIDAD EN VIVO</h2>
+          <div className="section-rule" />
+        </div>
+        <div className="activity-grid">
+          <div className="activity-card">
+            <div className="ac-head">
+              <div className="ac-title pixel">▸ ÚLTIMAS PUNTUACIONES</div>
+            </div>
+            <div className="ticker">
+              {TICKER.map((r, i) => (
+                <div key={r.player} className="tick-row" style={{ animationDelay: `${i * 60}ms` }}>
+                  <span className={"tk-p neon-" + r.color}>{r.player}</span>
+                  <span className="tk-mid">▸ {r.game}</span>
+                  <span className="tk-s">+{r.score.toLocaleString("es-ES")}</span>
+                  <span className="tk-t">{r.ago}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="activity-card">
+            <div className="ac-head">
+              <div className="ac-title pixel neon-magenta">▸ TOP JUGADORES · HOY</div>
+              <Link className="lb-link" href="/salon">
+                VER SALÓN →
+              </Link>
+            </div>
+            <div className="top-list">
+              {TOP_TODAY.map((r, i) => (
+                <div
+                  key={r.player}
+                  className={
+                    "top-row" + (i === 0 ? " top1" : i === 1 ? " top2" : i === 2 ? " top3" : "")
+                  }
+                >
+                  <span className="tp-rk">#{String(r.rank).padStart(2, "0")}</span>
+                  <span className="tp-bar">
+                    <span className="tp-fill" style={{ width: `${100 - i * 16}%` }} />
+                  </span>
+                  <span className="tp-p">{r.player}</span>
+                  <span className="tp-s">{r.score.toLocaleString("es-ES")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
     </div>
