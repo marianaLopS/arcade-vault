@@ -24,10 +24,15 @@ export function Nav() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  // Biblioteca queda marcada también en el detalle y en el reproductor.
+  // Inicio sólo se marca en la landing exacta; Biblioteca cubre además el
+  // detalle de cada juego y el reproductor.
+  const enInicio = pathname === "/";
   const enBiblioteca =
-    pathname === "/" || pathname.startsWith("/juegos") || pathname.startsWith("/jugar");
+    pathname.startsWith("/biblioteca") ||
+    pathname.startsWith("/juegos") ||
+    pathname.startsWith("/jugar");
   const enSalon = pathname.startsWith("/salon");
+  const enAcerca = pathname.startsWith("/acerca");
   const enAcceso = pathname.startsWith("/acceso");
   const activa = (on: boolean) => (on ? "active" : "");
 
@@ -42,11 +47,17 @@ export function Nav() {
         </Link>
 
         <div className="links">
-          <Link className={activa(enBiblioteca)} href="/">
+          <Link className={activa(enInicio)} href="/">
+            Inicio
+          </Link>
+          <Link className={activa(enBiblioteca)} href="/biblioteca">
             Biblioteca
           </Link>
           <Link className={activa(enSalon)} href="/salon">
             Salón de la Fama
+          </Link>
+          <Link className={activa(enAcerca)} href="/acerca">
+            Acerca de
           </Link>
         </div>
 
@@ -92,11 +103,17 @@ export function Nav() {
         <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>
           MENÚ
         </div>
-        <Link className={activa(enBiblioteca)} href="/" onClick={close}>
+        <Link className={activa(enInicio)} href="/" onClick={close}>
+          Inicio
+        </Link>
+        <Link className={activa(enBiblioteca)} href="/biblioteca" onClick={close}>
           Biblioteca
         </Link>
         <Link className={activa(enSalon)} href="/salon" onClick={close}>
           Salón de la Fama
+        </Link>
+        <Link className={activa(enAcerca)} href="/acerca" onClick={close}>
+          Acerca de
         </Link>
         <Link className={activa(enAcceso)} href="/acceso" onClick={close}>
           {user ? "Cuenta" : "Iniciar Sesión"}
