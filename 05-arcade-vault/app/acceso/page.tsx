@@ -16,7 +16,7 @@ export default function Auth() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     signIn({ name: (usuario || "PLAYER1").toUpperCase().slice(0, 10) });
-    router.push("/");
+    router.push("/biblioteca");
   };
 
   return (
@@ -99,7 +99,7 @@ export default function Auth() {
           type="button"
           className="btn ghost"
           style={{ width: "100%", marginTop: 10 }}
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/biblioteca")}
         >
           JUGAR COMO INVITADO
         </button>

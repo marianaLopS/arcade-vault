@@ -21,7 +21,7 @@ export default function NotFound() {
         desmagnetizado.
       </p>
       <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-        <Link className="btn lg" href="/">
+        <Link className="btn lg" href="/biblioteca">
           VOLVER AL VAULT
         </Link>
         <Link className="btn ghost lg" href="/salon">
