@@ -1309,3 +1309,43 @@ body { position: relative; z-index: 2; display: flex; flex-direction: column; mi
 .faq-item:nth-child(3) { border-left-color: var(--yellow); }
 .faq-q { font-size: 10px; letter-spacing: 0.12em; color: var(--ink); margin-bottom: 8px; }
 .faq-a { font-family: var(--mono); font-size: 13px; color: var(--ink-dim); line-height: 1.6; }
+
+/* =====================================================================
+   SPEC 02 — correcciones de desbordamiento horizontal
+   El pack home-about no es responsive por debajo de ~420px y la barra de
+   navegación ya desbordaba desde SPEC 01. Ambos bloques van al final para
+   ganar por cascada sin editar las reglas portadas.
+   ===================================================================== */
+
+/* --- Tarjeta de actividad: dejar que la rejilla pueda encoger ---------- */
+.activity-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .activity-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.activity-card, .ticker, .top-list, .tick-row, .top-row { min-width: 0; }
+.tick-row > *, .top-row > * { min-width: 0; }
+.tk-mid, .tp-p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Bajo 560px cada fila del ticker pasa a dos líneas: jugador + puntuación
+   arriba, juego + antigüedad debajo. */
+@media (max-width: 560px) {
+  .tick-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "p s" "m t";
+    row-gap: 4px;
+    padding: 10px 14px;
+  }
+  .tk-p { grid-area: p; }
+  .tk-s { grid-area: s; }
+  .tk-mid { grid-area: m; }
+  .tk-t { grid-area: t; text-align: right; }
+}
+
+/* --- Barra de navegación: cabe en pantallas estrechas ----------------- */
+@media (max-width: 840px) {
+  .av-nav { gap: 12px; }
+}
+@media (max-width: 420px) {
+  .av-nav { gap: 8px; padding: 12px 12px; }
+  .av-nav .auth-btn { padding: 10px 12px; font-size: 9px; letter-spacing: 0.1em; }
+  .av-nav .hamburger { padding: 10px 12px; }
+}
