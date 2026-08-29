@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { GAMES, type Game } from "@/lib/games";
+import { FEATURES, type Feature } from "@/lib/home-data";
 import { useReveal } from "@/lib/use-reveal";
 
 /** Siluetas pixeladas que flotan de fondo en el hero. Puramente decorativas. */
@@ -116,6 +118,86 @@ function FloatingSilhouettes() {
   );
 }
 
+/** Iconos pixelados de 16x16 de la rejilla de características. Heredan el color
+ *  de acento de la tarjeta que los contiene vía `currentColor`. */
+function FeatureIcon({ kind }: { kind: Feature["icon"] }) {
+  const C = "currentColor";
+
+  if (kind === "GAMEPAD")
+    return (
+      <svg className="ft-icon" viewBox="0 0 16 16">
+        <g fill={C}>
+          <rect x="2" y="6" width="12" height="6" />
+          <rect x="0" y="8" width="2" height="4" />
+          <rect x="14" y="8" width="2" height="4" />
+          <rect x="3" y="8" width="2" height="2" />
+          <rect x="2" y="9" width="4" height="0.5" />
+          <rect x="11" y="7" width="1.5" height="1.5" />
+          <rect x="11" y="10" width="1.5" height="1.5" />
+        </g>
+      </svg>
+    );
+
+  if (kind === "FREE")
+    return (
+      <svg className="ft-icon" viewBox="0 0 16 16">
+        <g fill={C}>
+          <rect x="3" y="3" width="10" height="10" fill="none" stroke={C} strokeWidth="1.5" />
+          <rect x="5" y="6" width="1.5" height="4" />
+          <rect x="5" y="6" width="4" height="1.5" />
+          <rect x="5" y="8" width="3" height="1" />
+          <rect x="10" y="6" width="1.5" height="4" />
+        </g>
+      </svg>
+    );
+
+  if (kind === "TROPHY")
+    return (
+      <svg className="ft-icon" viewBox="0 0 16 16">
+        <g fill={C}>
+          <rect x="3" y="2" width="10" height="2" />
+          <rect x="3" y="2" width="2" height="6" />
+          <rect x="11" y="2" width="2" height="6" />
+          <rect x="5" y="8" width="6" height="2" />
+          <rect x="7" y="10" width="2" height="3" />
+          <rect x="5" y="13" width="6" height="1.5" />
+          <rect x="1" y="3" width="2" height="3" />
+          <rect x="13" y="3" width="2" height="3" />
+        </g>
+      </svg>
+    );
+
+  return (
+    <svg className="ft-icon" viewBox="0 0 16 16">
+      <g fill={C}>
+        <rect x="7" y="1" width="2" height="2" />
+        <rect x="6" y="3" width="4" height="2" />
+        <rect x="5" y="5" width="6" height="6" />
+        <rect x="4" y="11" width="2" height="2" />
+        <rect x="10" y="11" width="2" height="2" />
+        <rect x="7" y="6" width="2" height="2" fill="#0a0a0f" />
+        <rect x="6" y="13" width="1" height="2" />
+        <rect x="9" y="13" width="1" height="2" />
+      </g>
+    </svg>
+  );
+}
+
+/** Tarjeta compacta del rail de juegos disponibles. */
+function MiniCard({ game }: { game: Game }) {
+  return (
+    <Link className="mini-card" href={`/juegos/${game.id}`}>
+      <div className="mini-cover">
+        <div className={"cover-bg " + game.cover} />
+      </div>
+      <div className="mini-meta">
+        <div className="mini-title">{game.title}</div>
+        <div className="mini-cat">{game.cat}</div>
+      </div>
+    </Link>
+  );
+}
+
 export default function HomePage() {
   useReveal();
 
@@ -149,6 +231,46 @@ export default function HomePage() {
             <span>DESLIZA</span>
             <span className="arrow">▼</span>
           </div>
+        </div>
+      </section>
+      {/* 01 — POR QUÉ */}
+      <section className="home-section reveal">
+        <div className="section-head">
+          <div className="kicker pixel neon-magenta">{"// 01"}</div>
+          <h2 className="section-title">¿POR QUÉ ARCADE VAULT?</h2>
+          <div className="section-rule" />
+        </div>
+        <div className="feature-grid">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className={"feature-card " + f.color}
+              style={{ transitionDelay: `${i * 80}ms` }}
+            >
+              <FeatureIcon kind={f.icon} />
+              <div className="ft-title pixel">{f.title}</div>
+              <div className="ft-desc">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 02 — JUEGOS DISPONIBLES */}
+      <section className="home-section reveal">
+        <div className="section-head">
+          <div className="kicker pixel neon-cyan">{"// 02"}</div>
+          <h2 className="section-title">JUEGOS DISPONIBLES AHORA</h2>
+          <div className="section-rule" />
+        </div>
+        <div className="mini-rail">
+          {GAMES.slice(0, 6).map((g) => (
+            <MiniCard key={g.id} game={g} />
+          ))}
+        </div>
+        <div style={{ textAlign: "center", marginTop: 24 }}>
+          <Link className="btn lg" href="/biblioteca">
+            VER TODOS LOS JUEGOS →
+          </Link>
         </div>
       </section>
     </div>
