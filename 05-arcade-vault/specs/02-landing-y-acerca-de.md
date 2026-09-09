@@ -43,6 +43,7 @@ lo que falta, sin tocar lo existente.
 
 - Envío real del formulario de contacto. No hay backend ni servicio de correo; el botón sólo
   pinta la terminal de éxito, igual que `/acceso` en SPEC 01 no autentica.
+  _(Superado por SPEC 03: el formulario ya envía correo de verdad con Resend.)_
 - Datos reales en el ticker, el top de jugadores y las estadísticas. Son literales fijos, no
   salen de `av_scores` ni de `seededScores()`.
 - Las clases `gp-*`, `dp-*`, `lg-*`, `.screw`, `.rivet`, `.score-pop` y el bloque "Theme

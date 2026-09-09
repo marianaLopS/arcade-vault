@@ -25,6 +25,14 @@ npm run lint    # eslint (flat config, sin argumentos)
 
 No hay framework de tests configurado; si se añade uno, documentarlo aquí.
 
+## Variables de entorno
+
+`.env.local` (ignorado por git; ver `.env.example`):
+
+- `RESEND_API_KEY` — clave de [Resend](https://resend.com/api-keys). La usa el Server Action
+  `sendContact` (`app/acerca/actions.ts`) para enviar el formulario de contacto de `/acerca`.
+  Sin ella el formulario muestra un error legible en vez de fallar.
+
 
 ## skills
 usa siempre /fronted-desing para diseñar la interfaz del usuario

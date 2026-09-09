@@ -1188,6 +1188,21 @@ body { position: relative; z-index: 2; display: flex; flex-direction: column; mi
 .contact-form textarea:focus { border-color: var(--cyan); box-shadow: 0 0 12px rgba(0,245,255,0.35); }
 .contact-form textarea::placeholder, .contact-form input::placeholder { color: var(--ink-faint); }
 
+/* Errores de validación del formulario de contacto */
+.field-error, .form-error {
+  font-size: 8px; line-height: 1.7; letter-spacing: 0.12em;
+  color: var(--magenta); text-shadow: 0 0 6px rgba(255,0,110,0.5);
+}
+.form-error { margin-bottom: 12px; }
+.field input[aria-invalid="true"], .contact-form textarea[aria-invalid="true"] {
+  border-color: var(--magenta); box-shadow: 0 0 10px rgba(255,0,110,0.3);
+}
+.contact-form .btn[disabled] {
+  opacity: 0.55; cursor: not-allowed; pointer-events: none;
+  animation: pending-pulse 1s steps(2) infinite;
+}
+@keyframes pending-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.8; } }
+
 .btn.press:active { transform: translateY(3px) scale(0.99); box-shadow: 0 0 6px rgba(0,245,255,0.2) inset; }
 
 .terminal-success { background: #000; border: 1px solid var(--green); box-shadow: 0 0 22px rgba(0,255,136,0.25); font-family: var(--mono); overflow: hidden; }
