@@ -5,7 +5,7 @@ import { guardarScore } from "@/app/jugar/actions";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import type { Game } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
-import { normalizarIniciales } from "@/lib/iniciales";
+import { limpiarIniciales, normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
 /** Puntos que cuesta subir de nivel en la simulación. */
 const PUNTOS_POR_NIVEL = 2500;
@@ -166,7 +166,7 @@ export function GamePlayer({
                   <div className="input-row">
                     <input
                       value={customName ?? iniciales}
-                      onChange={(e) => setCustomName(normalizarIniciales(e.target.value))}
+                      onChange={(e) => setCustomName(limpiarIniciales(e.target.value))}
                       placeholder="TUS INICIALES"
                       aria-label="Tus iniciales"
                       maxLength={3}
