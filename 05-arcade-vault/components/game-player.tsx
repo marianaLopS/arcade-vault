@@ -1,49 +1,49 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import type { Game } from "@/lib/games";
+import { getEngine } from "@/lib/games/registry";
 import { useSession } from "@/lib/session";
-
 /** Puntos que cuesta subir de nivel en la simulación. */
 const PUNTOS_POR_NIVEL = 2500;
-
 export function GamePlayer({ game }: { game: Game }) {
   const { user, saveScore } = useSession();
+  const factory = getEngine(game.id);
+  const canvasRef = useRef<GameCanvasHandle>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [engineLevel, setEngineLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saved, setSaved] = useState(false);
   /** Iniciales escritas en el modal; si es null manda el nombre de la sesión. */
   const [customName, setCustomName] = useState<string | null>(null);
-
-  // Esto no es un juego: es un contador que finge una partida para poder ver
-  // los estados de la maqueta (en marcha, en pausa, fin de partida).
+  // Sólo para los juegos que todavía no tienen motor: esto no es un juego, es
+  // un contador que finge una partida para poder ver los estados de la maqueta
+  // (en marcha, en pausa, fin de partida).
   useEffect(() => {
-    if (over || paused) return;
+    if (factory || over || paused) return;
     const t = setInterval(() => {
       setScore((s) => s + Math.floor(10 + Math.random() * 90));
     }, 220);
     return () => clearInterval(t);
-  }, [over, paused]);
-
-  const level = 1 + Math.floor(score / PUNTOS_POR_NIVEL);
+  }, [factory, over, paused]);
+  const level = factory ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
   const name = customName ?? user?.name ?? "INVITADO";
-
   const restart = () => {
     setScore(0);
     setLives(3);
+    setEngineLevel(1);
     setPaused(false);
     setOver(false);
     setSaved(false);
+    canvasRef.current?.restart();
   };
-
   const guardar = () => {
     saveScore({ game: game.id, score, name });
     setSaved(true);
   };
-
   return (
     <div className="av-player fade-in">
       <div className="player-hud">
@@ -71,24 +71,43 @@ export function GamePlayer({ game }: { game: Game }) {
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
             {paused ? "REANUDAR" : "PAUSA"}
           </button>
-          <button className="btn magenta" onClick={() => setOver(true)}>
-            FIN
-          </button>
+          {/* Con motor real el fin de partida lo decide el juego, no un botón. */}
+          {!factory && (
+            <button className="btn magenta" onClick={() => setOver(true)}>
+              FIN
+            </button>
+          )}
           <Link className="btn ghost" href={`/juegos/${game.id}`}>
             SALIR
           </Link>
         </div>
       </div>
-
       <div className="crt">
         <div className="crt-screen">
-          <div className="game-arena">
-            <div className="grid-floor" />
-            <div className="enemy e1" />
-            <div className="enemy e2" />
-            <div className="enemy e3" />
-            <div className="player-ship" />
-          </div>
+          {factory ? (
+            <GameCanvas
+              ref={canvasRef}
+              factory={factory}
+              paused={paused || over}
+              label={`${game.title} — flechas para rotar y propulsar, espacio para disparar`}
+              onScore={setScore}
+              onLives={setLives}
+              onLevel={setEngineLevel}
+              onGameOver={(finalScore) => {
+                setScore(finalScore);
+                setOver(true);
+              }}
+              onTogglePause={() => setPaused((p) => !p)}
+            />
+          ) : (
+            <div className="game-arena">
+              <div className="grid-floor" />
+              <div className="enemy e1" />
+              <div className="enemy e2" />
+              <div className="enemy e3" />
+              <div className="player-ship" />
+            </div>
+          )}
           {paused && (
             <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
               <div>
@@ -116,7 +135,6 @@ export function GamePlayer({ game }: { game: Game }) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
-
       {over && (
         <div className="modal-bd">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="av-fin-titulo">

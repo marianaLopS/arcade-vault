@@ -484,7 +484,9 @@ export const createAsteroidsGame: GameFactory = (
     rafId = null;
   }
   function startLoop() {
-    if (destroyed || rafId !== null) return;
+    // `state === "gameover"` frena un resume() posterior al fin de partida:
+    // sin esta guarda el bucle se reanudaría con la nave ya muerta.
+    if (destroyed || rafId !== null || state === "gameover") return;
     // Sin esto, el primer dt tras una pausa vale lo que haya durado la pausa.
     lastTime = null;
     rafId = requestAnimationFrame(loop);
