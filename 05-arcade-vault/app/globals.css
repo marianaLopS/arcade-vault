@@ -697,6 +697,25 @@ body { position: relative; z-index: 2; display: flex; flex-direction: column; mi
   background: var(--green); box-shadow: 0 0 6px var(--green);
 }
 
+/* real in-screen game: canvas de 800×600 escalado por CSS.
+   El mundo lógico del motor sigue siendo 800×600; aquí sólo se estira el
+   píxel, así que la física no cambia con el tamaño de la pantalla. */
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  background: #000;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+.game-canvas:focus { outline: none; }
+.game-canvas:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
 /* fake in-screen game */
 .game-arena {
   position: absolute; inset: 0;
