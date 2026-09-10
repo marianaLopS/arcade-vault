@@ -21,12 +21,33 @@ npm run dev     # servidor de desarrollo
 npm run build   # build de producción
 npm start       # servir el build
 npm run lint    # eslint (flat config, sin argumentos)
+npm run format  # prettier --write . (todo el repo)
 ```
+
+Formateo automático: el hook `PostToolUse` de `.claude/settings.json` procesa cada archivo
+que Claude escribe o edita dentro del proyecto, en este orden:
+
+1. `.claude/hooks/strip-blank-lines.mjs` elimina **todas las líneas en blanco** de
+   `.ts/.tsx/.js/.jsx/.mjs/.css` — el código se mantiene compacto. El script respeta las
+   líneas vacías que están dentro de template literals o comentarios de bloque, y no toca
+   `.md` ni otros formatos donde las líneas en blanco son sintaxis.
+2. `prettier --write --ignore-unknown` (config en `.prettierrc` / `.prettierignore`).
+3. `eslint --fix` en `.ts/.tsx/.js/.jsx/.mjs`.
+
+No escribas líneas en blanco separando bloques de código: el hook las quitará igual.
 
 No hay framework de tests configurado; si se añade uno, documentarlo aquí.
 
+## Variables de entorno
+
+`.env.local` (ignorado por git; ver `.env.example`):
+
+- `RESEND_API_KEY` — clave de [Resend](https://resend.com/api-keys). La usa el Server Action
+  `sendContact` (`app/acerca/actions.ts`) para enviar el formulario de contacto de `/acerca`.
+  Sin ella el formulario muestra un error legible en vez de fallar.
 
 ## skills
+
 usa siempre /fronted-desing para diseñar la interfaz del usuario
 
 ## Stack y convenciones
