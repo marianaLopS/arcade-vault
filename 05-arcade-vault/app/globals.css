@@ -1597,6 +1597,21 @@ body {
 .podium-slot.bronze .rank-num {
   color: var(--bronze);
 }
+/* Plaza sin reclamar: mismo hueco, sin el neón del metal que todavía no tiene
+   dueño. Evita el salto de maquetación entre el marcador vacío y el lleno. */
+.podium-slot.empty {
+  border-style: dashed;
+  border-color: var(--line-2);
+}
+.podium-slot.empty .rank-num,
+.podium-slot.empty .name,
+.podium-slot.empty .score {
+  color: var(--ink-faint);
+  text-shadow: none;
+}
+.podium-slot.empty .name {
+  letter-spacing: 0.3em;
+}
 .podium-slot .name {
   font-family: var(--pixel);
   font-size: 12px;

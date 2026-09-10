@@ -1,21 +1,18 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { HallYouRow } from "@/components/hall-you-row";
 import { GAMES, seededScores } from "@/lib/games";
-import { useSession } from "@/lib/session";
-
-export default function HallOfFame() {
-  const { user } = useSession();
-  const [tab, setTab] = useState(GAMES[0].id);
-
-  const rows = useMemo(() => seededScores(tab.length * 23 + 7, 12), [tab]);
-  const game = GAMES.find((g) => g.id === tab)!;
-
-  // Marca falsa del usuario: sólo maqueta, no sale de las puntuaciones guardadas.
-  const youRank = user ? 8 + (tab.length % 4) : null;
-  const youScore = user ? rows[5].score - 2400 : null;
-
+import { hasLeaderboard, topScores } from "@/lib/scores";
+export default async function HallOfFame({ searchParams }: PageProps<"/salon">) {
+  // La pestaña vive en la URL: así cada pestaña es enlazable y sus puntuaciones
+  // se leen en servidor. Un id desconocido cae en la primera, sin romper.
+  const { juego } = await searchParams;
+  const pedido = Array.isArray(juego) ? juego[0] : juego;
+  const game = GAMES.find((g) => g.id === pedido) ?? GAMES[0];
+  const conMarcador = await hasLeaderboard(game.id);
+  const rows = conMarcador
+    ? await topScores(game.id, 12)
+    : seededScores(game.id.length * 23 + 7, 12);
+  const vacio = rows.length === 0;
   return (
     <div className="av-hall fade-in">
       <div className="hall-head">
@@ -24,51 +21,50 @@ export default function HallOfFame() {
           LOS NOMBRES QUE NUNCA SE BORRAN DE LA PANTALLA
         </p>
       </div>
-
       <div className="hall-tabs">
         {GAMES.map((g) => (
-          <button
+          <Link
             key={g.id}
-            className={"chip" + (tab === g.id ? " active" : "")}
-            onClick={() => setTab(g.id)}
-            aria-pressed={tab === g.id}
+            href={`/salon?juego=${g.id}`}
+            className={"chip" + (game.id === g.id ? " active" : "")}
+            aria-current={game.id === g.id ? "page" : undefined}
           >
             {g.title}
-          </button>
+          </Link>
         ))}
       </div>
-
+      {/* El podio indexa las tres primeras filas: cada hueco se pinta sólo si su
+          fila existe, y con la tabla vacía quedan las tres plazas sin reclamar. */}
       <div className="podium">
-        <div className="podium-slot silver">
+        <div className={"podium-slot" + (rows[1] ? " silver" : " empty")}>
           <div className="rank-num">02</div>
-          <div className="name">{rows[1].name}</div>
-          <div className="score">{rows[1].score.toLocaleString("es-ES")}</div>
-          <div className="date">{rows[1].date}</div>
+          <div className="name">{rows[1]?.name ?? "— — —"}</div>
+          <div className="score">{rows[1] ? rows[1].score.toLocaleString("es-ES") : "—"}</div>
+          <div className="date">{rows[1]?.date ?? ""}</div>
         </div>
-        <div className="podium-slot gold">
+        <div className={"podium-slot" + (rows[0] ? " gold" : " empty")}>
           <div
             className="pixel"
             style={{ fontSize: 9, color: "var(--gold)", letterSpacing: "0.18em" }}
           >
-            CAMPEÓN
+            {rows[0] ? "CAMPEÓN" : "PLAZA LIBRE"}
           </div>
           <div className="rank-num" style={{ fontSize: 36, marginTop: 4 }}>
             01
           </div>
-          <div className="name">{rows[0].name}</div>
+          <div className="name">{rows[0]?.name ?? "— — —"}</div>
           <div className="score" style={{ fontSize: 20 }}>
-            {rows[0].score.toLocaleString("es-ES")}
+            {rows[0] ? rows[0].score.toLocaleString("es-ES") : "—"}
           </div>
-          <div className="date">{rows[0].date}</div>
+          <div className="date">{rows[0]?.date ?? ""}</div>
         </div>
-        <div className="podium-slot bronze">
+        <div className={"podium-slot" + (rows[2] ? " bronze" : " empty")}>
           <div className="rank-num">03</div>
-          <div className="name">{rows[2].name}</div>
-          <div className="score">{rows[2].score.toLocaleString("es-ES")}</div>
-          <div className="date">{rows[2].date}</div>
+          <div className="name">{rows[2]?.name ?? "— — —"}</div>
+          <div className="score">{rows[2] ? rows[2].score.toLocaleString("es-ES") : "—"}</div>
+          <div className="date">{rows[2]?.date ?? ""}</div>
         </div>
       </div>
-
       <div className="hall-table">
         <div className="th">
           <div>RANGO</div>
@@ -76,6 +72,14 @@ export default function HallOfFame() {
           <div>PUNTUACIÓN</div>
           <div>FECHA</div>
         </div>
+        {vacio && (
+          <p className="board-cta">
+            EL MARCADOR DE {game.title} ESTÁ EN BLANCO.
+            <br />
+            JUEGA UNA PARTIDA Y QUÉDATE EL <b>#01</b>
+            <span className="caret" />
+          </p>
+        )}
         {rows.map((r, i) => (
           <div
             key={r.name + i}
@@ -88,28 +92,8 @@ export default function HallOfFame() {
             <div className="dt">{r.date}</div>
           </div>
         ))}
-        {user && (
-          <>
-            <div className="tr you-label">▸ TU MEJOR MARCA EN {game.title}</div>
-            <div className="tr you" style={{ animationDelay: `${rows.length * 50 + 50}ms` }}>
-              <div className="rk" style={{ color: "var(--yellow)" }}>
-                #{String(youRank).padStart(2, "0")}
-              </div>
-              <div className="pl" style={{ color: "var(--yellow)" }}>
-                {user.name}
-              </div>
-              <div
-                className="sc"
-                style={{ color: "var(--yellow)", textShadow: "0 0 6px rgba(245,255,0,0.5)" }}
-              >
-                {(youScore ?? 9999).toLocaleString("es-ES")}
-              </div>
-              <div className="dt">11/05/2026</div>
-            </div>
-          </>
-        )}
+        {!conMarcador && <HallYouRow gameId={game.id} gameTitle={game.title} rows={rows} />}
       </div>
-
       <div style={{ textAlign: "center", marginTop: 32 }}>
         <Link className="btn lg" href="/biblioteca">
           VOLVER A LA BIBLIOTECA
