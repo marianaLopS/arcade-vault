@@ -1,23 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { normalizarIniciales } from "@/lib/iniciales";
 import { createClient } from "@/lib/supabase/server";
 /** Tope de la columna `score` en la base: el mismo CHECK, aquí para explicarlo. */
 const MAX_SCORE = 1_000_000;
 export type GuardarScoreResult = { ok: true } | { ok: false; error: string };
-/**
- * Normaliza las iniciales del modal de fin de partida al formato que acepta la
- * base (`^[A-Z]{1,3}$`): mayúsculas, sin acentos ni símbolos, tres letras como
- * mucho. Si no queda nada utilizable, el jugador es `AAA`.
- */
-function normalizarNombre(raw: string): string {
-  const limpio = raw
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z]/g, "")
-    .slice(0, 3);
-  return limpio || "AAA";
-}
 /**
  * Guarda una puntuación. La validación de verdad son los CHECK de la tabla —una
  * petición directa a PostgREST se salta este archivo—; esto existe para
@@ -33,7 +20,7 @@ export async function guardarScore(input: {
   if (!Number.isFinite(score) || score < 0 || score > MAX_SCORE) {
     return { ok: false, error: "LA PUNTUACIÓN NO ES VÁLIDA" };
   }
-  const player = normalizarNombre(name);
+  const player = normalizarIniciales(name);
   try {
     const supabase = await createClient();
     const { data: juego, error: errorJuego } = await supabase

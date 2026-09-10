@@ -863,6 +863,17 @@ body { position: relative; z-index: 2; display: flex; flex-direction: column; mi
 }
 .modal .input-row input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.35); }
 .modal .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+/* Error de guardado del modal de fin de partida: la partida no se cierra y se
+   puede reintentar. */
+.save-error {
+  font-family: var(--pixel);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--magenta);
+  text-shadow: 0 0 8px rgba(255, 0, 110, 0.5);
+  margin-top: 12px;
+  letter-spacing: 0.08em;
+}
 .toast-saved {
   font-family: var(--pixel);
   font-size: 11px;

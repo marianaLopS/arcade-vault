@@ -1,14 +1,23 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { guardarScore } from "@/app/jugar/actions";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import type { Game } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
+import { normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
 /** Puntos que cuesta subir de nivel en la simulación. */
 const PUNTOS_POR_NIVEL = 2500;
-export function GamePlayer({ game }: { game: Game }) {
-  const { user, saveScore } = useSession();
+export function GamePlayer({
+  game,
+  hasLeaderboard,
+}: {
+  game: Game;
+  /** ¿Tiene fila en `games`? Sólo entonces se puede guardar la puntuación. */
+  hasLeaderboard: boolean;
+}) {
+  const { user } = useSession();
   const factory = getEngine(game.id);
   const canvasRef = useRef<GameCanvasHandle>(null);
   const [score, setScore] = useState(0);
@@ -17,6 +26,8 @@ export function GamePlayer({ game }: { game: Game }) {
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [guardando, startGuardado] = useTransition();
   /** Iniciales escritas en el modal; si es null manda el nombre de la sesión. */
   const [customName, setCustomName] = useState<string | null>(null);
   // Sólo para los juegos que todavía no tienen motor: esto no es un juego, es
@@ -38,11 +49,19 @@ export function GamePlayer({ game }: { game: Game }) {
     setPaused(false);
     setOver(false);
     setSaved(false);
+    setErrorGuardado(null);
     canvasRef.current?.restart();
   };
+  // Lo que se va a guardar de verdad: la columna `player` acepta tres letras.
+  const iniciales = normalizarIniciales(name);
   const guardar = () => {
-    saveScore({ game: game.id, score, name });
-    setSaved(true);
+    if (guardando || saved) return;
+    setErrorGuardado(null);
+    startGuardado(async () => {
+      const res = await guardarScore({ game: game.id, score, name: iniciales });
+      if (res.ok) setSaved(true);
+      else setErrorGuardado(res.error);
+    });
   };
   return (
     <div className={`av-player fade-in${factory ? " has-canvas" : ""}`}>
@@ -141,22 +160,31 @@ export function GamePlayer({ game }: { game: Game }) {
             <h2 id="av-fin-titulo">FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
             <div className="final">{score.toLocaleString("es-ES")}</div>
-            {!saved ? (
-              <div className="input-row">
-                <input
-                  value={name}
-                  onChange={(e) => setCustomName(e.target.value.toUpperCase().slice(0, 10))}
-                  placeholder="TUS INICIALES"
-                  aria-label="Tus iniciales"
-                  autoFocus
-                />
-                <button className="btn yellow" onClick={guardar}>
-                  GUARDAR PUNTUACIÓN
-                </button>
-              </div>
-            ) : (
-              <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
-            )}
+            {hasLeaderboard &&
+              (!saved ? (
+                <>
+                  <div className="input-row">
+                    <input
+                      value={customName ?? iniciales}
+                      onChange={(e) => setCustomName(normalizarIniciales(e.target.value))}
+                      placeholder="TUS INICIALES"
+                      aria-label="Tus iniciales"
+                      maxLength={3}
+                      autoFocus
+                    />
+                    <button className="btn yellow" onClick={guardar} disabled={guardando}>
+                      {guardando ? "GUARDANDO…" : "GUARDAR PUNTUACIÓN"}
+                    </button>
+                  </div>
+                  {errorGuardado && (
+                    <div className="save-error" role="alert">
+                      ▸ {errorGuardado}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
+              ))}
             <div className="actions">
               <button className="btn" onClick={restart}>
                 JUGAR DE NUEVO
