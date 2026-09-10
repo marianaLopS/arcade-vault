@@ -46,6 +46,16 @@ No hay framework de tests configurado; si se añade uno, documentarlo aquí.
   `sendContact` (`app/acerca/actions.ts`) para enviar el formulario de contacto de `/acerca`.
   Sin ella el formulario muestra un error legible en vez de fallar.
 
+- `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto de Supabase
+  (`https://wlofsbjzfzywdgvovibv.supabase.co`).
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — clave publicable (`sb_publishable_…`) del mismo
+  proyecto.
+
+Las dos de Supabase llevan prefijo `NEXT_PUBLIC_` porque el cliente de navegador las necesita, y
+las dos son públicas por diseño: la seguridad la da RLS, no el secreto de la clave. La clave
+`service_role` **no** entra en este repositorio. A diferencia de `RESEND_API_KEY`, que degrada,
+si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`.
+
 ## skills
 
 usa siempre /fronted-desing para diseñar la interfaz del usuario
