@@ -1,6 +1,6 @@
 # SPEC 06 — Leaderboard real y tabla de juegos en Supabase
 
-> **Estado:** Borrador
+> **Estado:** Aprobado
 > **Depende de:** SPEC 04, SPEC 05
 > **Fecha:** 2026-09-10
 > **Objetivo:** Crear las tablas `games` y `scores` en Supabase, registrar ahí sólo los juegos que existen de verdad —hoy `asteroids`— y enchufar a esos datos los dos leaderboards que ya están pintados en el sitio.
