@@ -45,7 +45,7 @@ export function GamePlayer({ game }: { game: Game }) {
     setSaved(true);
   };
   return (
-    <div className="av-player fade-in">
+    <div className={`av-player fade-in${factory ? " has-canvas" : ""}`}>
       <div className="player-hud">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat">

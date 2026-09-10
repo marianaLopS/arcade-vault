@@ -619,6 +619,58 @@ body { position: relative; z-index: 2; display: flex; flex-direction: column; mi
   margin: 32px auto;
   padding: 0 24px 64px;
 }
+/* Con juego real el HUD se va al costado, como el panel lateral de un mueble
+   arcade: el alto de la ventana se lo queda entero la pantalla, que es lo que
+   se juega. El CRT sigue limitado por la ALTURA, no por el ancho, para que
+   quepa completo sin scroll.
+     --av-chrome  todo lo que rodea a la pantalla en vertical: nav, márgenes,
+                  el acolchado del marco y su pie.
+     --av-marco   acolchado lateral del propio marco.
+     --av-hud     ancho de la columna del HUD. */
+.av-player.has-canvas {
+  --av-chrome: 200px;
+  --av-marco: 48px;
+  --av-hud: 232px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: 1360px;
+  padding-bottom: 24px;
+}
+.av-player.has-canvas .player-hud {
+  flex: 0 0 var(--av-hud);
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 24px;
+  margin-bottom: 0;
+}
+/* El contenedor de las estadísticas trae display:flex en línea desde el JSX;
+   aquí sólo se le cambia el eje. */
+.av-player.has-canvas .player-hud > div:first-child { flex-direction: column; }
+.av-player.has-canvas .hud-actions { flex-direction: column; }
+.av-player.has-canvas .hud-actions .btn { width: 100%; }
+.av-player.has-canvas .crt {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: max(320px, calc((100svh - var(--av-chrome)) * 4 / 3 + var(--av-marco)));
+}
+/* En pantallas estrechas no hay sitio para la columna: el HUD vuelve arriba. */
+@media (max-width: 900px) {
+  .av-player.has-canvas { flex-direction: column; align-items: stretch; }
+  .av-player.has-canvas .player-hud {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    align-self: auto;
+    gap: 16px;
+    margin-bottom: 0;
+  }
+  .av-player.has-canvas .player-hud > div:first-child { flex-direction: row; }
+  .av-player.has-canvas .hud-actions { flex-direction: row; }
+  .av-player.has-canvas .hud-actions .btn { width: auto; }
+  .av-player.has-canvas .crt { width: 100%; max-width: 100%; }
+}
 .player-hud {
   display: flex; gap: 16px; align-items: center; justify-content: space-between;
   padding: 14px 18px;
