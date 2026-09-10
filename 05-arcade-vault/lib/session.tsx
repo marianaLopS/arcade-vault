@@ -4,15 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore }
 
 export type User = { name: string };
 
-export type SavedScore = {
-  game: string;
-  score: number;
-  name: string;
-  at: number;
-};
-
 const USER_KEY = "av_user";
-const SCORES_KEY = "av_scores";
 
 // ---------------------------------------------------------------------------
 // Store externo sobre localStorage.
@@ -31,15 +23,6 @@ function readUser(): User | null {
     return raw ? (JSON.parse(raw) as User) : null;
   } catch {
     return null;
-  }
-}
-
-function readScores(): SavedScore[] {
-  try {
-    const raw = localStorage.getItem(SCORES_KEY);
-    return raw ? (JSON.parse(raw) as SavedScore[]) : [];
-  } catch {
-    return [];
   }
 }
 
@@ -79,7 +62,6 @@ type SessionValue = {
   user: User | null;
   signIn: (user: User) => void;
   signOut: () => void;
-  saveScore: (entry: Omit<SavedScore, "at">) => void;
 };
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -90,20 +72,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback((next: User) => setUser(next), []);
   const signOut = useCallback(() => setUser(null), []);
 
-  const saveScore = useCallback((entry: Omit<SavedScore, "at">) => {
-    try {
-      const all = readScores();
-      all.push({ ...entry, at: Date.now() });
-      localStorage.setItem(SCORES_KEY, JSON.stringify(all));
-    } catch {
-      // La maqueta no depende de esto: la puntuación ya se ve en pantalla.
-    }
-  }, []);
-
-  const value = useMemo(
-    () => ({ user, signIn, signOut, saveScore }),
-    [user, signIn, signOut, saveScore],
-  );
+  const value = useMemo(() => ({ user, signIn, signOut }), [user, signIn, signOut]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

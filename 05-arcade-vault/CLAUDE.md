@@ -56,6 +56,32 @@ las dos son públicas por diseño: la seguridad la da RLS, no el secreto de la c
 `service_role` **no** entra en este repositorio. A diferencia de `RESEND_API_KEY`, que degrada,
 si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`.
 
+## Base de datos (Supabase)
+
+El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
+aplicadas con `apply_migration` del MCP de Supabase.
+
+| Objeto       | Qué es                                                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene una fila. |
+| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.          |
+| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                              |
+
+RLS activa en las dos tablas: `select` público, `insert` público en `scores`, y **ninguna**
+política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
+(`app/jugar/actions.ts`), que valida y hace `revalidatePath`; los `CHECK` de la tabla son la
+garantía real, la acción existe para dar un mensaje legible.
+
+Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`) y devuelven el
+caso vacío ante un error en vez de lanzar. Los siete juegos sin fila en `games` siguen pintando
+`seededScores()` de `lib/games.ts`.
+
+Tras cualquier cambio de esquema hay que regenerar los tipos:
+
+```bash
+npx supabase gen types typescript --project-id wlofsbjzfzywdgvovibv > lib/supabase/database.types.ts
+```
+
 ## skills
 
 usa siempre /fronted-desing para diseñar la interfaz del usuario
