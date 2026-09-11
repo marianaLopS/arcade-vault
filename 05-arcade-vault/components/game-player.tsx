@@ -108,7 +108,7 @@ export function GamePlayer({
               ref={canvasRef}
               factory={factory}
               paused={paused || over}
-              label={`${game.title} — flechas para rotar y propulsar, espacio para disparar`}
+              label={`${game.title} — flechas para rotar y propulsar, espacio para disparar, flecha abajo para el escudo, B para la bomba nova, Shift para la hiperpropulsión`}
               onScore={setScore}
               onLives={setLives}
               onLevel={setEngineLevel}
