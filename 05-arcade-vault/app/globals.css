@@ -1045,7 +1045,10 @@ body {
 .av-player.has-canvas .crt {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: max(320px, calc((100svh - var(--av-chrome)) * 4 / 3 + var(--av-marco)));
+  max-width: max(
+    320px,
+    calc((100svh - var(--av-chrome)) * var(--av-arw) / var(--av-arh) + var(--av-marco))
+  );
 }
 /* En pantallas estrechas no hay sitio para la columna: el HUD vuelve arriba. */
 @media (max-width: 900px) {
@@ -1137,7 +1140,8 @@ body {
 }
 .crt-screen {
   position: relative;
-  aspect-ratio: 4 / 3;
+  /* La razón la pone el juego (--av-arw/--av-arh); sin motor, el 4 / 3 de siempre. */
+  aspect-ratio: var(--av-arw, 4) / var(--av-arh, 3);
   background: #000;
   border-radius: 12px / 28px;
   overflow: hidden;
@@ -1196,14 +1200,14 @@ body {
   box-shadow: 0 0 6px var(--green);
 }
 
-/* real in-screen game: canvas de 800×600 escalado por CSS.
-   El mundo lógico del motor sigue siendo 800×600; aquí sólo se estira el
-   píxel, así que la física no cambia con el tamaño de la pantalla. */
+/* real in-screen game: canvas del tamaño que declare su motor, escalado por CSS.
+   El mundo lógico no cambia; aquí sólo se estira el píxel, así que la física es
+   la misma sea cual sea el tamaño de la pantalla. La razón la pone el `style`
+   en línea de components/game-canvas.tsx, que la lee del registro. */
 .game-canvas {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 4 / 3;
   max-width: 100%;
   background: #000;
   image-rendering: pixelated;
