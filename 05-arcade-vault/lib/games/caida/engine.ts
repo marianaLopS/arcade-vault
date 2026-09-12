@@ -243,6 +243,9 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
   let freezeMs = 0;
   /** La siguiente pieza será el 1×1 de recompensa (tras un Tetris). */
   let singlePending = false;
+  /** Aviso en pantalla del último power-up aplicado, y lo que le queda. */
+  let toastPower: PowerId | null = null;
+  let toastMs = 0;
   // ── Lógica de la partida ──
   function ghostY(): number {
     let gy = current.y;
@@ -307,6 +310,8 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
         break;
     }
     score += 50 * level;
+    toastPower = id;
+    toastMs = TOAST_MS;
   }
   function lockPiece() {
     if (gameOver) return;
@@ -360,27 +365,243 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     singlePending = false;
     nextPowerAt = POWER_EVERY;
     freezeMs = 0;
+    toastPower = null;
+    toastMs = 0;
     next = randomPiece(level);
     spawn();
   }
-  // El dibujo llega en el paso 4 y el bucle y la entrada en el paso 5.
+  // ── Dibujo ──
+  // Igual que en Asteroids, todo lo que pinta recibe `ctx` por parámetro: aquí
+  // no hay ningún canvas de módulo.
+  function drawBlock(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    colorIndex: number,
+    size: number,
+    alpha = 1,
+    ox = 0,
+    oy = 0,
+  ) {
+    if (!colorIndex) return;
+    const color = COLORS[colorIndex];
+    if (!color) return;
+    const px = ox + x * size;
+    const py = oy + y * size;
+    context.globalAlpha = alpha;
+    context.fillStyle = color;
+    context.fillRect(px + 1, py + 1, size - 2, size - 2);
+    // highlight
+    context.fillStyle = "rgba(255,255,255,0.12)";
+    context.fillRect(px + 1, py + 1, size - 2, 4);
+    if (colorIndex === WILD) {
+      // marco para distinguir los comodines del resto de bloques claros
+      context.strokeStyle = "#7aa2f7";
+      context.lineWidth = 2;
+      context.strokeRect(px + 2, py + 2, size - 4, size - 4);
+    }
+    context.globalAlpha = 1;
+  }
+  function drawPowerBlock(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    powerId: PowerId,
+    size: number,
+    alpha = 1,
+    ox = 0,
+    oy = 0,
+  ) {
+    const info = powerInfo(powerId);
+    const px = ox + x * size;
+    const py = oy + y * size;
+    context.globalAlpha = alpha;
+    context.fillStyle = info.color;
+    context.fillRect(px + 1, py + 1, size - 2, size - 2);
+    context.fillStyle = "rgba(255,255,255,0.12)";
+    context.fillRect(px + 1, py + 1, size - 2, 4);
+    context.font = `${Math.floor(size * 0.6)}px system-ui, sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#0f0f17";
+    context.fillText(info.icon, px + size / 2, py + size / 2 + 1);
+    context.globalAlpha = 1;
+  }
+  function drawGrid() {
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.lineWidth = 0.5;
+    for (let c = 1; c < COLS; c++) {
+      ctx.beginPath();
+      ctx.moveTo(c * BLOCK, 0);
+      ctx.lineTo(c * BLOCK, ROWS * BLOCK);
+      ctx.stroke();
+    }
+    for (let r = 1; r < ROWS; r++) {
+      ctx.beginPath();
+      ctx.moveTo(0, r * BLOCK);
+      ctx.lineTo(COLS * BLOCK, r * BLOCK);
+      ctx.stroke();
+    }
+  }
+  function drawBoard() {
+    drawGrid();
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) drawBlock(ctx, c, r, board[r][c], BLOCK);
+    // tras el game over solo queda el tablero: la pieza que colisionó no se dibuja
+    if (gameOver) return;
+    const gy = ghostY();
+    if (current.power) {
+      drawPowerBlock(ctx, current.x, gy, current.power, BLOCK, 0.2);
+      drawPowerBlock(ctx, current.x, current.y, current.power, BLOCK);
+      return;
+    }
+    for (let r = 0; r < current.shape.length; r++)
+      for (let c = 0; c < current.shape[r].length; c++)
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+    for (let r = 0; r < current.shape.length; r++)
+      for (let c = 0; c < current.shape[r].length; c++)
+        drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+  }
+  /** Rótulo pequeño del panel, en mayúsculas y espaciado. */
+  function panelLabel(text: string, y: number) {
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#6f6f86";
+    ctx.fillText(text, PANEL_X + 12, y);
+  }
+  /** Parte el texto en líneas que quepan en `maxWidth`. */
+  function wrap(text: string, maxWidth: number): string[] {
+    const out: string[] = [];
+    let line = "";
+    for (const word of text.split(" ")) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (ctx.measureText(candidate).width > maxWidth && line) {
+        out.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+  // El panel sustituye al segundo canvas y a los <aside> del original: la pieza
+  // siguiente, las líneas y el estado del power-up, dibujados en el mismo ctx.
+  function drawPanel() {
+    ctx.fillStyle = "#07070b";
+    ctx.fillRect(PANEL_X, 0, PANEL_W, H);
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PANEL_X + 0.5, 0);
+    ctx.lineTo(PANEL_X + 0.5, H);
+    ctx.stroke();
+    // SIGUIENTE: misma caja de 4×4 celdas de 30 px que el drawNext original.
+    panelLabel("SIGUIENTE", 28);
+    const boxY = 40;
+    if (next.power) {
+      drawPowerBlock(ctx, 1.5, 1.5, next.power, BLOCK, 1, PANEL_X, boxY);
+    } else {
+      const shape = next.shape;
+      const offX = Math.floor((4 - shape[0].length) / 2);
+      const offY = Math.floor((4 - shape.length) / 2);
+      for (let r = 0; r < shape.length; r++)
+        for (let c = 0; c < shape[r].length; c++)
+          drawBlock(ctx, offX + c, offY + r, shape[r][c], BLOCK, 1, PANEL_X, boxY);
+    }
+    // LÍNEAS: no tiene casilla en el HUD de la plataforma, así que vive aquí.
+    panelLabel("LÍNEAS", boxY + 150);
+    ctx.font = "22px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = "#e8e8f0";
+    ctx.fillText(String(lines), PANEL_X + 12, boxY + 178);
+    // PODER: lo que el original escribía en #power-status y #power-desc.
+    panelLabel("PODER", boxY + 224);
+    let titulo: string;
+    let desc: string;
+    if (freezeMs > 0) {
+      const freeze = powerInfo("freeze");
+      titulo = `${freeze.icon} ${(freezeMs / 1000).toFixed(1)} s`;
+      desc = freeze.desc;
+    } else {
+      const active = current.power ?? next.power ?? null;
+      if (active) {
+        const info = powerInfo(active);
+        titulo = `${info.icon} ${info.name}`;
+        desc = info.desc;
+      } else {
+        titulo = "—";
+        desc = "Aparece cada 5 líneas";
+      }
+    }
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = "#e8e8f0";
+    ctx.fillText(titulo, PANEL_X + 12, boxY + 248);
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = "#6f6f86";
+    let y = boxY + 266;
+    for (const linea of wrap(desc, PANEL_W - 24)) {
+      ctx.fillText(linea, PANEL_X + 12, y);
+      y += 12;
+    }
+  }
+  // Aviso del power-up recién aplicado. El original lo hacía con un <div> y un
+  // setTimeout; aquí es un temporizador que descuenta `dt` dentro del bucle, así
+  // la pausa lo congela en vez de dejarlo correr de fondo.
+  function drawToast() {
+    if (!toastPower || toastMs <= 0) return;
+    const info = powerInfo(toastPower);
+    // los últimos 400 ms se desvanecen
+    const alpha = Math.min(1, toastMs / 400);
+    const w = PANEL_X - 40;
+    const x = 20;
+    const y = 40;
+    const h = 64;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(7,7,11,0.92)";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = info.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = "20px system-ui, sans-serif";
+    ctx.fillStyle = info.color;
+    ctx.fillText(info.icon, x + 12, y + 32);
+    ctx.font = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillText(info.name.toUpperCase(), x + 42, y + 30);
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = "#b9b9c9";
+    let ty = y + 46;
+    for (const linea of wrap(info.desc, w - 54)) {
+      ctx.fillText(linea, x + 42, ty);
+      ty += 11;
+    }
+    ctx.globalAlpha = 1;
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawBoard();
+    drawPanel();
+    drawToast();
+  }
+  // El bucle y la entrada llegan en el paso 5.
   reset();
-  void ctx;
+  draw();
   void callbacks;
   void tryRotate;
   void hardDrop;
   void softDrop;
-  void ghostY;
-  void GRID_COLOR;
-  void COLORS;
-  void powerInfo;
-  void PANEL_X;
-  void TOAST_MS;
+  void dropInterval;
+  void dropAccum;
   return {
     start: () => {},
     pause: () => {},
     resume: () => {},
-    restart: () => reset(),
+    restart: () => {
+      reset();
+      draw();
+    },
     destroy: () => {},
   };
 }
