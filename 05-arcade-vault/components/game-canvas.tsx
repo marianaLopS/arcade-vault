@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useImperativeHandle, useRef } from "react";
-import type { GameEngine, GameFactory } from "@/lib/games/engine";
+import type { GameEngine } from "@/lib/games/engine";
+import type { GameEngineEntry } from "@/lib/games/registry";
 export type GameCanvasHandle = {
   /** Reinicia la partida sin desmontar el canvas. */
   restart: () => void;
@@ -8,9 +9,9 @@ export type GameCanvasHandle = {
   focus: () => void;
 };
 type Props = {
-  factory: GameFactory;
+  /** Entrada del registro: la factoría, el mundo lógico y los controles. */
+  entry: GameEngineEntry;
   paused: boolean;
-  label: string;
   onScore: (score: number) => void;
   onLives: (lives: number) => void;
   onLevel: (level: number) => void;
@@ -20,9 +21,8 @@ type Props = {
   ref?: React.Ref<GameCanvasHandle>;
 };
 export function GameCanvas({
-  factory,
+  entry,
   paused,
-  label,
   onScore,
   onLives,
   onLevel,
@@ -34,7 +34,7 @@ export function GameCanvas({
   const engineRef = useRef<GameEngine | null>(null);
   // Los callbacks cambian en cada render del padre (el HUD se repinta al subir
   // el marcador). Se guardan en una ref para que el efecto de abajo dependa
-  // sólo de `factory` y el motor no se recree a mitad de partida.
+  // sólo de `entry` y el motor no se recree a mitad de partida.
   const handlers = useRef({ onScore, onLives, onLevel, onGameOver, onTogglePause });
   useEffect(() => {
     handlers.current = { onScore, onLives, onLevel, onGameOver, onTogglePause };
@@ -42,7 +42,7 @@ export function GameCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const engine = factory(canvas, {
+    const engine = entry.create(canvas, {
       onScore: (v) => handlers.current.onScore(v),
       onLives: (v) => handlers.current.onLives(v),
       onLevel: (v) => handlers.current.onLevel(v),
@@ -55,7 +55,7 @@ export function GameCanvas({
       engine.destroy();
       engineRef.current = null;
     };
-  }, [factory]);
+  }, [entry]);
   // Pausa y reanudación. No arranca nada por su cuenta: el efecto de arriba ya
   // dejó el bucle en marcha.
   useEffect(() => {
@@ -84,11 +84,12 @@ export function GameCanvas({
     <canvas
       ref={canvasRef}
       className="game-canvas"
-      width={800}
-      height={600}
+      width={entry.width}
+      height={entry.height}
+      style={{ aspectRatio: entry.width + " / " + entry.height }}
       tabIndex={0}
       role="application"
-      aria-label={label}
+      aria-label={entry.controls}
       onKeyDown={handleKeyDown}
       onClick={() => canvasRef.current?.focus()}
     />
