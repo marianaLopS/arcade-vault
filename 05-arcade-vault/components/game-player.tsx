@@ -18,7 +18,7 @@ export function GamePlayer({
   hasLeaderboard: boolean;
 }) {
   const { user } = useSession();
-  const factory = getEngine(game.id);
+  const entry = getEngine(game.id);
   const canvasRef = useRef<GameCanvasHandle>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -34,13 +34,13 @@ export function GamePlayer({
   // un contador que finge una partida para poder ver los estados de la maqueta
   // (en marcha, en pausa, fin de partida).
   useEffect(() => {
-    if (factory || over || paused) return;
+    if (entry || over || paused) return;
     const t = setInterval(() => {
       setScore((s) => s + Math.floor(10 + Math.random() * 90));
     }, 220);
     return () => clearInterval(t);
-  }, [factory, over, paused]);
-  const level = factory ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
+  }, [entry, over, paused]);
+  const level = entry ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
   const name = customName ?? user?.name ?? "INVITADO";
   const restart = () => {
     setScore(0);
@@ -64,7 +64,17 @@ export function GamePlayer({
     });
   };
   return (
-    <div className={`av-player fade-in${factory ? " has-canvas" : ""}`}>
+    <div
+      className={`av-player fade-in${entry ? " has-canvas" : ""}`}
+      // El marco CRT necesita la razón del mundo lógico en dos números: calc()
+      // no sabe multiplicar por un valor de aspect-ratio. Sin motor no se ponen
+      // y el CSS cae en el 4 / 3 de siempre.
+      style={
+        entry
+          ? ({ "--av-arw": entry.width, "--av-arh": entry.height } as React.CSSProperties)
+          : undefined
+      }
+    >
       <div className="player-hud">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat">
@@ -91,7 +101,7 @@ export function GamePlayer({
             {paused ? "REANUDAR" : "PAUSA"}
           </button>
           {/* Con motor real el fin de partida lo decide el juego, no un botón. */}
-          {!factory && (
+          {!entry && (
             <button className="btn magenta" onClick={() => setOver(true)}>
               FIN
             </button>
@@ -103,12 +113,11 @@ export function GamePlayer({
       </div>
       <div className="crt">
         <div className="crt-screen">
-          {factory ? (
+          {entry ? (
             <GameCanvas
               ref={canvasRef}
-              factory={factory}
+              entry={entry}
               paused={paused || over}
-              label={`${game.title} — flechas para rotar y propulsar, espacio para disparar`}
               onScore={setScore}
               onLives={setLives}
               onLevel={setEngineLevel}
