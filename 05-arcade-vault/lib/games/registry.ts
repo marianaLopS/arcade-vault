@@ -5,6 +5,7 @@
 // Añadir un juego nuevo es añadir una línea, no un `if`.
 import type { GameFactory } from "@/lib/games/engine";
 import { createAsteroidsGame } from "@/lib/games/asteroids/engine";
+import { createCaidaGame } from "@/lib/games/caida/engine";
 /**
  * Todo lo que la plataforma necesita saber de un juego para montarlo: cómo se
  * crea, qué mundo lógico dibuja y qué teclas entiende. Los tres datos son por
@@ -25,6 +26,13 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     height: 600,
     controls:
       "flechas para rotar y propulsar, espacio para disparar, flecha abajo para el escudo, B para la bomba nova, Shift para la hiperpropulsión",
+  },
+  caida: {
+    create: createCaidaGame,
+    width: 420,
+    height: 600,
+    controls:
+      "flechas para mover y bajar, flecha arriba o X para rotar, espacio para caída rápida",
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {

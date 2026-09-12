@@ -585,23 +585,150 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     drawPanel();
     drawToast();
   }
-  // El bucle y la entrada llegan en el paso 5.
+  // ── Avisos a la plataforma ──
+  // Sustituyen al updateHUD() del original: sólo se llama al callback cuando el
+  // valor cambia, que es lo que promete el contrato.
+  let lastScore = -1;
+  let lastLevel = -1;
+  function emit() {
+    if (score !== lastScore) {
+      lastScore = score;
+      callbacks.onScore(score);
+    }
+    if (level !== lastLevel) {
+      lastLevel = level;
+      callbacks.onLevel(level);
+    }
+  }
+  // ── Bucle ──
+  let rafId: number | null = null;
+  let lastTime: number | null = null;
+  let destroyed = false;
+  let paused = false;
+  function tick(dt: number) {
+    if (freezeMs > 0) {
+      // Congelado: la pieza no baja, pero sigue siendo movible y rotable.
+      freezeMs = Math.max(0, freezeMs - dt);
+      dropAccum = 0;
+      return;
+    }
+    dropAccum += dt;
+    if (dropAccum >= dropInterval) {
+      dropAccum = 0;
+      if (!collide(board, current.shape, current.x, current.y + 1)) current.y++;
+      else lockPiece();
+    }
+  }
+  function loop(ts: number) {
+    rafId = null;
+    if (destroyed) return;
+    // `dt` en milisegundos, como el original, pero capado a 50 ms: sin el cap,
+    // volver de una pestaña en segundo plano vacía `dropAccum` de golpe y hunde
+    // la pieza varias filas.
+    const dt = lastTime === null ? 0 : Math.min(ts - lastTime, 50);
+    lastTime = ts;
+    if (toastMs > 0) toastMs = Math.max(0, toastMs - dt);
+    tick(dt);
+    draw();
+    emit();
+    if (gameOver) {
+      stopLoop();
+      callbacks.onLives(0);
+      callbacks.onGameOver(score);
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+  function stopLoop() {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  function startLoop() {
+    if (destroyed || rafId !== null || gameOver || paused) return;
+    // Sin esto, el `dt` del primer frame tras la pausa sería toda la pausa.
+    lastTime = null;
+    rafId = requestAnimationFrame(loop);
+  }
+  // ── Entrada ──
+  // `KeyP` no está: la pausa la atiende components/game-canvas.tsx sobre este
+  // mismo canvas, y mirarla aquí también la encendería y apagaría a la vez.
+  const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", "Space", "KeyX"]);
+  function onKeyDown(e: KeyboardEvent) {
+    if (!GAME_KEYS.has(e.code)) return;
+    // Con el canvas enfocado, las flechas y el espacio no hacen scroll.
+    e.preventDefault();
+    if (paused || gameOver) return;
+    switch (e.code) {
+      case "ArrowLeft":
+        if (!collide(board, current.shape, current.x - 1, current.y)) current.x--;
+        break;
+      case "ArrowRight":
+        if (!collide(board, current.shape, current.x + 1, current.y)) current.x++;
+        break;
+      case "ArrowDown":
+        softDrop();
+        break;
+      case "ArrowUp":
+      case "KeyX":
+        tryRotate();
+        break;
+      case "Space":
+        hardDrop();
+        break;
+    }
+    draw();
+    emit();
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    if (GAME_KEYS.has(e.code)) e.preventDefault();
+  }
+  function onBlur() {
+    // Nada que soltar: aquí no hay teclas mantenidas. Se conserva el listener
+    // para no dejar el canvas con estado si mañana las hubiera.
+    dropAccum = 0;
+  }
+  canvas.addEventListener("keydown", onKeyDown);
+  canvas.addEventListener("keyup", onKeyUp);
+  canvas.addEventListener("blur", onBlur);
   reset();
   draw();
-  void callbacks;
-  void tryRotate;
-  void hardDrop;
-  void softDrop;
-  void dropInterval;
-  void dropAccum;
   return {
-    start: () => {},
-    pause: () => {},
-    resume: () => {},
-    restart: () => {
-      reset();
-      draw();
+    start: () => {
+      if (destroyed) return;
+      // Tetris no tiene vidas, pero el HUD de la plataforma tiene la casilla:
+      // una vida es la lectura honesta, y mentir con un guion es peor.
+      callbacks.onLives(1);
+      emit();
+      startLoop();
     },
-    destroy: () => {},
+    pause: () => {
+      paused = true;
+      stopLoop();
+    },
+    resume: () => {
+      if (!paused) return;
+      paused = false;
+      startLoop();
+    },
+    restart: () => {
+      if (destroyed) return;
+      stopLoop();
+      reset();
+      lastScore = -1;
+      lastLevel = -1;
+      paused = false;
+      draw();
+      callbacks.onLives(1);
+      emit();
+      startLoop();
+    },
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      stopLoop();
+      canvas.removeEventListener("keydown", onKeyDown);
+      canvas.removeEventListener("keyup", onKeyUp);
+      canvas.removeEventListener("blur", onBlur);
+    },
   };
 }
