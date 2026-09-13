@@ -1,6 +1,6 @@
 # SPEC 09 — ARKANOID: la ficha `bloque-buster` se vuelve jugable
 
-> **Estado:** Borrador
+> **Estado:** Aprobado
 > **Depende de:** SPEC 05, SPEC 06, SPEC 08
 > **Fecha:** 2026-09-13
 > **Objetivo:** Portar el Arkanoid de `../04-arkanoid/` al contrato `GameEngine`, con sonido y spritesheet, sobre la ficha `bloque-buster` renombrada a `arkanoid`, y darlo de alta en `games` para que tenga leaderboard real.
