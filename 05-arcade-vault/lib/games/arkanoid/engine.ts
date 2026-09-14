@@ -13,6 +13,7 @@
 //   · El spritesheet, los sonidos y los listeners se crean dentro de la
 //     factoría y mueren con destroy(); los listeners van sobre el canvas.
 // Todo lo demás —constantes, niveles, física, puntuación— es idéntico al original.
+import type { GameCallbacks, GameEngine, GameFactory } from "@/lib/games/engine";
 import type { BlockColor, SpriteFrame } from "@/lib/games/arkanoid/sprites";
 import { EXPLOSION_DURATION, EXPLOSION_FRAMES, SPRITES } from "@/lib/games/arkanoid/sprites";
 // ── Mundo ─────────────────────────────────────────────────────────────────────
@@ -320,3 +321,260 @@ class Ball {
     drawFrame(ctx, sheet, SPRITES.ball, this.x, this.y, this.w, this.h);
   }
 }
+// ── Motor ─────────────────────────────────────────────────────────────────────
+const SPRITESHEET_SRC = "/juegos/arkanoid/spritesheet-breakout.png";
+const SOUND_SRC: Record<SoundName, string> = {
+  bounce: "/juegos/arkanoid/sounds/ball-bounce.mp3",
+  break: "/juegos/arkanoid/sounds/break-sound.mp3",
+};
+/** Teclas que el juego consume; con el canvas enfocado no hacen scroll. */
+const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "Space", "KeyM"]);
+export const createArkanoidGame: GameFactory = (
+  canvas: HTMLCanvasElement,
+  callbacks: GameCallbacks,
+): GameEngine => {
+  const ctx2d = canvas.getContext("2d");
+  if (!ctx2d) throw new Error("El canvas de Arkanoid no expone un contexto 2D");
+  // Anotado explícito: dentro de las clausuras de abajo se pierde el estrechamiento.
+  const ctx: CanvasRenderingContext2D = ctx2d;
+  canvas.width = W;
+  canvas.height = H;
+  // Estado de la partida — en la clausura, nunca en el módulo.
+  const paddle = new Paddle();
+  const ball = new Ball();
+  let blocks: Block[] = []; // el loop filtra los dead
+  let explosions: Explosion[] = []; // el loop filtra las dead, igual que blocks
+  let score = 0; // acumula durante los tres niveles
+  let lives = LIVES_START; // vuelve a LIVES_START al empezar cada nivel
+  let level = 0; // índice en LEVELS
+  let state: "playing" | "gameover" = "playing";
+  // Bucle
+  let rafId: number | null = null;
+  let lastTime: number | null = null;
+  let destroyed = false;
+  // Entrada
+  const keys: Record<string, boolean> = {};
+  const justPressed: Record<string, boolean> = {};
+  function pressed(code: string) {
+    const val = justPressed[code];
+    justPressed[code] = false;
+    return !!val;
+  }
+  // Ratón en coordenadas de mundo, o null si no se ha movido desde el último frame.
+  let mouseX: number | null = null;
+  // ── Spritesheet ────────────────────────────────────────────────────────────
+  // Carga asíncrona. Hasta que llega, draw() pinta negro y update() no avanza.
+  // Como el original, se copia a un canvas fuera de pantalla.
+  let sheet: HTMLCanvasElement | null = null;
+  const rawImg = new Image();
+  rawImg.onload = () => {
+    if (destroyed) return;
+    const oc = document.createElement("canvas");
+    oc.width = rawImg.width;
+    oc.height = rawImg.height;
+    oc.getContext("2d")?.drawImage(rawImg, 0, 0);
+    sheet = oc;
+    if (rafId === null) draw(); // pausado: al menos se ve el tablero
+  };
+  rawImg.onerror = () => console.error("No se pudo cargar el spritesheet de Arkanoid");
+  rawImg.src = SPRITESHEET_SRC;
+  // ── Sonido ─────────────────────────────────────────────────────────────────
+  // Cada sonido precarga varias instancias y las usa en rotación: con una sola,
+  // romper varios bloques seguidos solo dejaría oír el último.
+  function crearSonido(ruta: string) {
+    const pool: HTMLAudioElement[] = [];
+    for (let i = 0; i < SOUND_POOL; i++) {
+      const audio = new Audio(ruta);
+      audio.volume = SOUND_VOLUME;
+      pool.push(audio);
+    }
+    return { pool, i: 0 };
+  }
+  const sonidos = {
+    bounce: crearSonido(SOUND_SRC.bounce),
+    break: crearSonido(SOUND_SRC.break),
+  };
+  let muted = false; // tecla M; no se persiste entre sesiones
+  function play(nombre: SoundName) {
+    if (muted || destroyed) return;
+    const sonido = sonidos[nombre];
+    const audio = sonido.pool[sonido.i];
+    sonido.i = (sonido.i + 1) % sonido.pool.length;
+    audio.currentTime = 0;
+    // El navegador rechaza la reproducción hasta la primera interacción: se ignora.
+    audio.play().catch(() => {});
+  }
+  function silenciarTodo() {
+    for (const s of Object.values(sonidos)) s.pool.forEach((a) => a.pause());
+  }
+  // ── Avisos al HUD: sólo cuando el valor cambia ──────────────────────────────
+  let lastScore = -1;
+  let lastLives = -1;
+  let lastLevel = -1;
+  function emit() {
+    if (score !== lastScore) {
+      lastScore = score;
+      callbacks.onScore(score);
+    }
+    if (lives !== lastLives) {
+      lastLives = lives;
+      callbacks.onLives(lives);
+    }
+    // El HUD cuenta los niveles desde 1; LEVELS se indexa desde 0.
+    if (level !== lastLevel) {
+      lastLevel = level;
+      callbacks.onLevel(level + 1);
+    }
+  }
+  // ── Partida ────────────────────────────────────────────────────────────────
+  // Prepara un nivel: bloques, vidas y ancho de pala. La puntuación no se toca.
+  function cargarNivel(i: number) {
+    level = i;
+    blocks = crearBloques(LEVELS[i]);
+    explosions = [];
+    lives = LIVES_START;
+    paddle.w = PADDLE_WIDTHS[i];
+    paddle.x = clamp(paddle.x, 0, W - paddle.w); // al estrecharse podría quedar fuera
+    ball.reset(paddle);
+  }
+  // Deja la partida como recién empezada, desde el primer nivel
+  function initGame() {
+    score = 0;
+    state = "playing";
+    cargarNivel(0);
+    emit();
+  }
+  function update(dt: number) {
+    if (pressed("KeyM")) muted = !muted;
+    if (!sheet || state !== "playing") return;
+    paddle.update(dt, keys, mouseX);
+    mouseX = null; // consumido: se rearma en el próximo mousemove
+    const perdida = ball.update(
+      dt,
+      paddle,
+      blocks,
+      () => pressed("Space"),
+      play,
+      (b) => {
+        score += b.points;
+        explosions.push(new Explosion(b));
+      },
+    );
+    if (perdida) {
+      lives--;
+      if (lives <= 0) {
+        lives = 0;
+        state = "gameover";
+        return;
+      }
+    }
+    explosions.forEach((e) => e.update(dt));
+    // Ninguna entidad se autoelimina: el loop filtra las marcadas dead
+    blocks = blocks.filter((b) => !b.dead);
+    explosions = explosions.filter((e) => !e.dead);
+    // El cambio de nivel (y la victoria) esperan a que se apague la explosión
+    // del último bloque. La victoria acaba la partida igual que perder.
+    if (blocks.length === 0 && explosions.length === 0) {
+      if (level < LEVELS.length - 1) cargarNivel(level + 1);
+      else state = "gameover";
+    }
+  }
+  function draw() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    blocks.forEach((b) => b.draw(ctx, sheet));
+    paddle.draw(ctx, sheet);
+    ball.draw(ctx, sheet);
+    // Encima de pala y bola: el efecto se ve entero aunque la bola pase por ahí
+    explosions.forEach((e) => e.draw(ctx, sheet));
+    if (muted) {
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("SIN SONIDO", W / 2 + 60, 30);
+    }
+  }
+  // ── Bucle principal ────────────────────────────────────────────────────────
+  function loop(ts: number) {
+    // dt capado a DT_MAX: volver de una pestaña en segundo plano no atraviesa la pala.
+    const dt = lastTime === null ? 0 : Math.min((ts - lastTime) / 1000, DT_MAX);
+    lastTime = ts;
+    update(dt);
+    draw();
+    emit();
+    if (state === "gameover") {
+      stopLoop();
+      callbacks.onGameOver(score);
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+  function stopLoop() {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  function startLoop() {
+    // `state === "gameover"` frena un resume() posterior al fin de partida.
+    if (destroyed || rafId !== null || state === "gameover") return;
+    // Sin esto, el primer dt tras una pausa vale lo que haya durado la pausa.
+    lastTime = null;
+    rafId = requestAnimationFrame(loop);
+  }
+  // ── Entrada: listeners en el canvas, nunca en window ────────────────────────
+  function onKeyDown(e: KeyboardEvent) {
+    if (!GAME_KEYS.has(e.code)) return;
+    e.preventDefault();
+    if (!keys[e.code]) justPressed[e.code] = true;
+    keys[e.code] = true;
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    if (!GAME_KEYS.has(e.code)) return;
+    e.preventDefault();
+    keys[e.code] = false;
+  }
+  /** Al perder el foco se sueltan todas las teclas: la pala no se queda corriendo. */
+  function onBlur() {
+    for (const code of Object.keys(keys)) keys[code] = false;
+    for (const code of Object.keys(justPressed)) justPressed[code] = false;
+    mouseX = null;
+  }
+  function onMouseMove(e: MouseEvent) {
+    const rect = canvas.getBoundingClientRect();
+    // El canvas está estirado por CSS: se normaliza al espacio de mundo.
+    mouseX = (e.clientX - rect.left) * (W / rect.width);
+  }
+  canvas.addEventListener("keydown", onKeyDown);
+  canvas.addEventListener("keyup", onKeyUp);
+  canvas.addEventListener("blur", onBlur);
+  canvas.addEventListener("mousemove", onMouseMove);
+  initGame();
+  draw();
+  return {
+    start: startLoop,
+    pause() {
+      stopLoop();
+      silenciarTodo();
+    },
+    resume: startLoop,
+    restart() {
+      if (destroyed) return;
+      stopLoop();
+      onBlur();
+      initGame();
+      startLoop();
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      stopLoop();
+      rawImg.onload = null;
+      rawImg.onerror = null;
+      silenciarTodo();
+      canvas.removeEventListener("keydown", onKeyDown);
+      canvas.removeEventListener("keyup", onKeyUp);
+      canvas.removeEventListener("blur", onBlur);
+      canvas.removeEventListener("mousemove", onMouseMove);
+    },
+  };
+};
