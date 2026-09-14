@@ -46,5 +46,6 @@ export async function guardarScore(input: {
   }
   revalidatePath("/salon");
   revalidatePath(`/juegos/${game}`);
+  revalidatePath(`/jugar/${game}`);
   return { ok: true };
 }

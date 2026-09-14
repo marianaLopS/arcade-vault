@@ -1005,36 +1005,42 @@ body {
   margin: 32px auto;
   padding: 0 24px 64px;
 }
-/* Con juego real el HUD se va al costado, como el panel lateral de un mueble
-   arcade: el alto de la ventana se lo queda entero la pantalla, que es lo que
-   se juega. El CRT sigue limitado por la ALTURA, no por el ancho, para que
-   quepa completo sin scroll.
-     --av-chrome  todo lo que rodea a la pantalla en vertical: nav, márgenes,
-                  el acolchado del marco y su pie.
-     --av-marco   acolchado lateral del propio marco.
-     --av-hud     ancho de la columna del HUD. */
+/* Con juego real la pantalla ocupa el alto de la ventana y nada más, como el
+   frontal de un mueble arcade: HUD a la izquierda, CRT en el centro y ranking a
+   la derecha. El CRT no calcula su tamaño restando el chrome: `.crt-fit` es un
+   contenedor de tamaño y la pantalla se encaja en él por alto o por ancho.
+     --av-nav-h   alto de la nav, lo mide y publica game-player.tsx.
+     --av-hud     ancho de la columna del HUD.
+     --av-board   ancho de la columna del ranking. */
 .av-player.has-canvas {
-  --av-chrome: 200px;
-  --av-marco: 48px;
-  --av-hud: 232px;
-  display: flex;
-  align-items: flex-start;
+  --av-hud: 210px;
+  --av-board: 290px;
+  display: grid;
+  grid-template-columns: var(--av-hud) minmax(0, 1fr) var(--av-board);
   gap: 18px;
-  max-width: 1360px;
-  padding-bottom: 24px;
+  box-sizing: border-box;
+  height: calc(100svh - var(--av-nav-h, 70px));
+  min-height: 460px;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 16px 24px;
 }
 .av-player.has-canvas .player-hud {
-  flex: 0 0 var(--av-hud);
   flex-direction: column;
   align-items: stretch;
-  align-self: stretch;
-  gap: 24px;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 20px;
+  min-height: 0;
   margin-bottom: 0;
+  overflow: hidden;
 }
 /* El contenedor de las estadísticas trae display:flex en línea desde el JSX;
    aquí sólo se le cambia el eje. */
 .av-player.has-canvas .player-hud > div:first-child {
   flex-direction: column;
+  flex-wrap: nowrap !important;
+  gap: 18px !important;
 }
 .av-player.has-canvas .hud-actions {
   flex-direction: column;
@@ -1043,29 +1049,101 @@ body {
   width: 100%;
 }
 .av-player.has-canvas .crt {
-  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  max-width: max(
-    320px,
-    calc((100svh - var(--av-chrome)) * var(--av-arw) / var(--av-arh) + var(--av-marco))
-  );
+  min-height: 0;
+  padding: 16px;
 }
-/* En pantallas estrechas no hay sitio para la columna: el HUD vuelve arriba. */
-@media (max-width: 900px) {
+.av-player.has-canvas .crt-fit {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+.av-player.has-canvas .crt-screen {
+  width: min(100cqw, 100cqh * var(--av-arw) / var(--av-arh));
+}
+.av-player.has-canvas .crt-bottom {
+  margin-top: 10px;
+}
+.player-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+.player-board .lb-row {
+  grid-template-columns: 30px 1fr auto;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+.player-board .lb-row .rk {
+  font-size: 9px;
+}
+.player-board .lb-row .sc {
+  font-size: 10px;
+}
+.player-board .board-cta {
+  font-size: 9px;
+}
+/* Ventanas bajas: se aprieta el HUD y se esconden las fechas del ranking. */
+@media (max-height: 760px) {
   .av-player.has-canvas {
-    flex-direction: column;
-    align-items: stretch;
+    padding-block: 10px;
+    gap: 12px;
+  }
+  .av-player.has-canvas .player-hud > div:first-child {
+    gap: 10px !important;
+  }
+  .av-player.has-canvas .hud-stat .v {
+    font-size: 13px;
+  }
+  .player-board .lb-row {
+    padding: 5px 14px;
+  }
+  .player-board .lb-row .dt {
+    display: none;
+  }
+}
+/* Sin sitio para tres columnas: el ranking baja bajo el HUD, a la izquierda. */
+@media (max-width: 1200px) {
+  .av-player.has-canvas {
+    --av-hud: 250px;
+    grid-template-columns: var(--av-hud) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .av-player.has-canvas .player-hud {
-    flex: 0 0 auto;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .av-player.has-canvas .crt {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .player-board {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+/* Pantallas estrechas: todo apilado y con scroll normal de página. */
+@media (max-width: 900px) {
+  .av-player.has-canvas {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+  }
+  .av-player.has-canvas .player-hud {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    align-self: auto;
     gap: 16px;
-    margin-bottom: 0;
   }
   .av-player.has-canvas .player-hud > div:first-child {
     flex-direction: row;
+    flex-wrap: wrap !important;
   }
   .av-player.has-canvas .hud-actions {
     flex-direction: row;
@@ -1073,9 +1151,15 @@ body {
   .av-player.has-canvas .hud-actions .btn {
     width: auto;
   }
-  .av-player.has-canvas .crt {
+  .av-player.has-canvas .crt-fit {
+    container-type: normal;
+    display: block;
+  }
+  .av-player.has-canvas .crt-screen {
     width: 100%;
-    max-width: 100%;
+  }
+  .player-board {
+    overflow: visible;
   }
 }
 .player-hud {

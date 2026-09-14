@@ -89,17 +89,9 @@ export function Nav() {
         </button>
       </nav>
 
-      <div
-        className={"av-mobile-backdrop" + (open ? " open" : "")}
-        onClick={close}
-        aria-hidden
-      />
+      <div className={"av-mobile-backdrop" + (open ? " open" : "")} onClick={close} aria-hidden />
 
-      <aside
-        id={PANEL_ID}
-        className={"av-mobile-panel" + (open ? " open" : "")}
-        inert={!open}
-      >
+      <aside id={PANEL_ID} className={"av-mobile-panel" + (open ? " open" : "")} inert={!open}>
         <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>
           MENÚ
         </div>
