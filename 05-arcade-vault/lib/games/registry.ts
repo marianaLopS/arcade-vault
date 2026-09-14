@@ -7,6 +7,7 @@ import type { GameFactory } from "@/lib/games/engine";
 import { createArkanoidGame } from "@/lib/games/arkanoid/engine";
 import { createAsteroidsGame } from "@/lib/games/asteroids/engine";
 import { createCaidaGame } from "@/lib/games/caida/engine";
+import { createSnakeGame } from "@/lib/games/snake/engine";
 /**
  * Todo lo que la plataforma necesita saber de un juego para montarlo: cómo se
  * crea, qué mundo lógico dibuja y qué teclas entiende. Los tres datos son por
@@ -39,6 +40,12 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     width: 800,
     height: 600,
     controls: "flechas o ratón para mover la pala, espacio para lanzar la bola, M para silenciar",
+  },
+  snake: {
+    create: createSnakeGame,
+    width: 800,
+    height: 600,
+    controls: "flechas o WASD para girar la serpiente",
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {
