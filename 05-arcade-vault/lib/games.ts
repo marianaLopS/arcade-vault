@@ -3,7 +3,7 @@
 export type Cat = "ARCADE" | "PUZZLE" | "SHOOTER" | "VERSUS";
 
 export type Game = {
-  /** Identificador y segmento de URL: /juegos/bloque-buster */
+  /** Identificador y segmento de URL: /juegos/arkanoid */
   id: string;
   title: string;
   /** Descripción corta, para la tarjeta de la biblioteca. */
@@ -27,8 +27,8 @@ export type ScoreRow = {
 
 export const GAMES: Game[] = [
   {
-    id: "bloque-buster",
-    title: "BLOQUE BUSTER",
+    id: "arkanoid",
+    title: "ARKANOID",
     short: "Rebota la pelota y destruye muros de neón.",
     long: "Pilota una nave-paleta y rebota un núcleo de plasma para pulverizar muros de bloques cromáticos. Cada nivel reorganiza la grilla en patrones imposibles. ¿Hasta dónde llegará tu racha?",
     cat: "ARCADE",
