@@ -7,10 +7,7 @@ const ESTADO_INICIAL: ContactState = { ok: false, attempt: 0 };
 
 function Formulario({ onReset }: { onReset: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", msg: "" });
-  const [state, formAction, pending] = useActionState(
-    sendContact,
-    ESTADO_INICIAL,
-  );
+  const [state, formAction, pending] = useActionState(sendContact, ESTADO_INICIAL);
 
   const errores = state.errors;
   const hayError = Boolean(state.errors || state.formError);
@@ -35,11 +32,7 @@ function Formulario({ onReset }: { onReset: () => void }) {
               aria-describedby={errores?.name ? "error-nombre" : undefined}
             />
             {errores?.name && (
-              <p
-                className="field-error pixel"
-                id="error-nombre"
-                aria-live="polite"
-              >
+              <p className="field-error pixel" id="error-nombre" aria-live="polite">
                 ▸ {errores.name}
               </p>
             )}
@@ -57,11 +50,7 @@ function Formulario({ onReset }: { onReset: () => void }) {
               aria-describedby={errores?.email ? "error-correo" : undefined}
             />
             {errores?.email && (
-              <p
-                className="field-error pixel"
-                id="error-correo"
-                aria-live="polite"
-              >
+              <p className="field-error pixel" id="error-correo" aria-live="polite">
                 ▸ {errores.email}
               </p>
             )}
@@ -79,11 +68,7 @@ function Formulario({ onReset }: { onReset: () => void }) {
               aria-describedby={errores?.msg ? "error-mensaje" : undefined}
             />
             {errores?.msg && (
-              <p
-                className="field-error pixel"
-                id="error-mensaje"
-                aria-live="polite"
-              >
+              <p className="field-error pixel" id="error-mensaje" aria-live="polite">
                 ▸ {errores.msg}
               </p>
             )}
@@ -112,15 +97,14 @@ function Formulario({ onReset }: { onReset: () => void }) {
           </div>
           <div className="term-body">
             <div className="line">
-              <span className="prompt">vault@arcade:~$</span> ./send_message
-              --to=team
+              <span className="prompt">vault@arcade:~$</span> ./send_message --to=team
             </div>
             <div className="line dim">[OK] Conectando con servidor…</div>
             <div className="line dim">[OK] Validando contenido…</div>
             <div className="line dim">[OK] Transmitiendo paquete…</div>
             <div className="line success">
-              &gt; MENSAJE RECIBIDO. TE RESPONDEREMOS PRONTO. GRACIAS,{" "}
-              {state.name?.toUpperCase()}.<span className="caret">_</span>
+              &gt; MENSAJE RECIBIDO. TE RESPONDEREMOS PRONTO. GRACIAS, {state.name?.toUpperCase()}.
+              <span className="caret">_</span>
             </div>
             <div style={{ marginTop: 18 }}>
               <button className="btn ghost" type="button" onClick={onReset}>

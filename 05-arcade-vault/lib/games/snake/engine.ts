@@ -296,6 +296,10 @@ export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallba
       turns = [];
       initGame();
       draw();
+      // El reproductor repone su HUD al reiniciar: se vuelve a avisar de todo.
+      lastScore = -1;
+      lastLives = -1;
+      lastLevel = -1;
       emit();
       startLoop();
     },

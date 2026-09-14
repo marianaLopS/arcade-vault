@@ -3,7 +3,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { guardarScore } from "@/app/jugar/actions";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
-import type { Game } from "@/lib/games";
+import { Leaderboard } from "@/components/leaderboard";
+import type { Game, ScoreRow } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
 import { limpiarIniciales, normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
@@ -12,8 +13,11 @@ const PUNTOS_POR_NIVEL = 2500;
 export function GamePlayer({
   game,
   hasLeaderboard,
+  scores,
 }: {
   game: Game;
+  /** Top del juego, para la columna del ranking junto a la pantalla. */
+  scores: ScoreRow[];
   /** ¿Tiene fila en `games`? Sólo entonces se puede guardar la puntuación. */
   hasLeaderboard: boolean;
 }) {
@@ -40,6 +44,22 @@ export function GamePlayer({
     }, 220);
     return () => clearInterval(t);
   }, [entry, over, paused]);
+  // La pantalla ocupa el alto de la ventana menos la barra de navegación, cuyo
+  // alto cambia con el ancho (los enlaces se parten). Se mide en vivo y se
+  // publica como --av-nav-h para que el CSS no dependa de un número fijo.
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>(".av-nav");
+    if (!nav) return;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => {
+      root.style.setProperty("--av-nav-h", nav.offsetHeight + "px");
+    });
+    ro.observe(nav);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--av-nav-h");
+    };
+  }, []);
   const level = entry ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
   const name = customName ?? user?.name ?? "INVITADO";
   const restart = () => {
@@ -112,50 +132,54 @@ export function GamePlayer({
         </div>
       </div>
       <div className="crt">
-        <div className="crt-screen">
-          {entry ? (
-            <GameCanvas
-              ref={canvasRef}
-              entry={entry}
-              paused={paused || over}
-              onScore={setScore}
-              onLives={setLives}
-              onLevel={setEngineLevel}
-              onGameOver={(finalScore) => {
-                setScore(finalScore);
-                setOver(true);
-              }}
-              onTogglePause={() => setPaused((p) => !p)}
-            />
-          ) : (
-            <div className="game-arena">
-              <div className="grid-floor" />
-              <div className="enemy e1" />
-              <div className="enemy e2" />
-              <div className="enemy e3" />
-              <div className="player-ship" />
-            </div>
-          )}
-          {paused && (
-            <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
-              <div>
-                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
-                  EN PAUSA
-                </div>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--ink-dim)",
-                    marginTop: 10,
-                    letterSpacing: "0.16em",
-                  }}
-                >
-                  PULSA REANUDAR PARA CONTINUAR
+        {/* `crt-fit` es un contenedor de tamaño: la pantalla se encaja en él por
+            alto o por ancho, lo que llegue antes, sin restar a mano el chrome. */}
+        <div className="crt-fit">
+          <div className="crt-screen">
+            {entry ? (
+              <GameCanvas
+                ref={canvasRef}
+                entry={entry}
+                paused={paused || over}
+                onScore={setScore}
+                onLives={setLives}
+                onLevel={setEngineLevel}
+                onGameOver={(finalScore) => {
+                  setScore(finalScore);
+                  setOver(true);
+                }}
+                onTogglePause={() => setPaused((p) => !p)}
+              />
+            ) : (
+              <div className="game-arena">
+                <div className="grid-floor" />
+                <div className="enemy e1" />
+                <div className="enemy e2" />
+                <div className="enemy e3" />
+                <div className="player-ship" />
+              </div>
+            )}
+            {paused && (
+              <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
+                <div>
+                  <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
+                    EN PAUSA
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--ink-dim)",
+                      marginTop: 10,
+                      letterSpacing: "0.16em",
+                    }}
+                  >
+                    PULSA REANUDAR PARA CONTINUAR
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <div className="crt-bottom">
           <span className="led">SEÑAL OK</span>
@@ -163,6 +187,7 @@ export function GamePlayer({
           <span>CARGA · 1MB</span>
         </div>
       </div>
+      {entry && <Leaderboard scores={scores} className="player-board" />}
       {over && (
         <div className="modal-bd">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="av-fin-titulo">
