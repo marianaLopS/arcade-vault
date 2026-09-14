@@ -4,6 +4,7 @@
 // aquí sigue siendo maqueta: components/game-player.tsx le pinta la simulación.
 // Añadir un juego nuevo es añadir una línea, no un `if`.
 import type { GameFactory } from "@/lib/games/engine";
+import { createArkanoidGame } from "@/lib/games/arkanoid/engine";
 import { createAsteroidsGame } from "@/lib/games/asteroids/engine";
 import { createCaidaGame } from "@/lib/games/caida/engine";
 /**
@@ -31,8 +32,13 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     create: createCaidaGame,
     width: 420,
     height: 600,
-    controls:
-      "flechas para mover y bajar, flecha arriba o X para rotar, espacio para caída rápida",
+    controls: "flechas para mover y bajar, flecha arriba o X para rotar, espacio para caída rápida",
+  },
+  arkanoid: {
+    create: createArkanoidGame,
+    width: 800,
+    height: 600,
+    controls: "flechas o ratón para mover la pala, espacio para lanzar la bola, M para silenciar",
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {
