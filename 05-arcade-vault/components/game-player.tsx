@@ -62,16 +62,6 @@ export function GamePlayer({
   }, []);
   const level = entry ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
   const name = customName ?? user?.name ?? "INVITADO";
-  const restart = () => {
-    setScore(0);
-    setLives(3);
-    setEngineLevel(1);
-    setPaused(false);
-    setOver(false);
-    setSaved(false);
-    setErrorGuardado(null);
-    canvasRef.current?.restart();
-  };
   // Lo que se va a guardar de verdad: la columna `player` acepta tres letras.
   const iniciales = normalizarIniciales(name);
   const guardar = () => {
@@ -220,11 +210,8 @@ export function GamePlayer({
                 <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
               ))}
             <div className="actions">
-              <button className="btn" onClick={restart}>
-                JUGAR DE NUEVO
-              </button>
-              <Link className="btn magenta" href="/biblioteca">
-                VOLVER AL VAULT
+              <Link className="btn magenta" href={`/salon?juego=${game.id}`}>
+                VOLVER AL LEADERBOARD
               </Link>
             </div>
           </div>
