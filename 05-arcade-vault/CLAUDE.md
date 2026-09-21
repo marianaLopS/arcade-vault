@@ -7,8 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Arcade Vault: plataforma web para jugar juegos arcade online y competir por puntuación.
-Estado actual: scaffold de `create-next-app` sin código de dominio todavía — `app/page.tsx`
-sigue siendo la plantilla por defecto. Los juegos aún no están implementados aquí.
+Estado actual: 4 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
+**ARKANOID** y **SNAKE** — cada uno con leaderboard real en Supabase. El resto del catálogo
+(`gloton`, `invasores`, `ranaria`, `duelo-pixel`) sigue en modo maqueta, pintando
+`seededScores()` de `lib/games.ts` en vez de datos reales.
 
 El README indica que el flujo de trabajo es **Spec Driven Design** con los comandos `/spec`
 y `/spec-impl` de las skills `Klerith/fernando-skills` (instalar con
@@ -38,6 +40,23 @@ No escribas líneas en blanco separando bloques de código: el hook las quitará
 
 No hay framework de tests configurado; si se añade uno, documentarlo aquí.
 
+## Arquitectura de juegos
+
+Cada juego real vive en `lib/games/<slug>/engine.ts` (+ `sprites.ts` cuando usa spritesheet:
+`arkanoid`, `snake`) e implementa el contrato compartido de `lib/games/engine.ts`
+(`GameCallbacks`, `GameEngine`, `GameFactory`): el motor dibuja en un `<canvas>` y reporta
+eventos por callbacks, sin React dentro. `lib/games/registry.ts` (`GAME_ENGINES`,
+`getEngine(id)`) mapea el slug al motor.
+
+En el lado de React: `components/game-canvas.tsx` monta/desmonta el motor sobre el canvas;
+`components/game-player.tsx` (`GamePlayer`) es el orquestador — HUD, pausa, modal de guardar
+puntuación — y cae a una simulación `.game-arena` cuando `getEngine(id)` devuelve `undefined`
+(los 4 juegos aún sin motor). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
+mejores puntuaciones dentro de `GamePlayer` cuando `hasLeaderboard` es `true`.
+
+Para agregar un juego nuevo sigue el flujo de la skill `nuevo-juego` (ver sección "skills"),
+no un proceso ad-hoc.
+
 ## Variables de entorno
 
 `.env.local` (ignorado por git; ver `.env.example`):
@@ -61,11 +80,11 @@ si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`
 El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
 aplicadas con `apply_migration` del MCP de Supabase.
 
-| Objeto       | Qué es                                                                                                                                                                       |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene una fila. |
-| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.          |
-| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                              |
+| Objeto       | Qué es                                                                                                                                                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 4 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake` y mas... mira /home/mariana/Escritorio/claudeCode/05-arcade-vault/References/resources/resources/implemented-games.md cuando lo necesiten.|
+| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                    |
+| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                        |
 
 RLS activa en las dos tablas: `select` público, `insert` público en `scores`, y **ninguna**
 política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
@@ -73,8 +92,8 @@ política de `update` ni `delete`. La escritura pasa por la Server Action `guard
 garantía real, la acción existe para dar un mensaje legible.
 
 Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`) y devuelven el
-caso vacío ante un error en vez de lanzar. Los siete juegos sin fila en `games` siguen pintando
-`seededScores()` de `lib/games.ts`.
+caso vacío ante un error en vez de lanzar. Los cuatro juegos sin fila en `games` (`gloton`,
+`invasores`, `ranaria`, `duelo-pixel`) siguen pintando `seededScores()` de `lib/games.ts`.
 
 Tras cualquier cambio de esquema hay que regenerar los tipos:
 
@@ -85,6 +104,17 @@ npx supabase gen types typescript --project-id wlofsbjzfzywdgvovibv > lib/supaba
 ## skills
 
 usa siempre /fronted-desing para diseñar la interfaz del usuario
+
+`nuevo-juego` (espejada en `.claude/skills/nuevo-juego/` y `.agents/skills/nuevo-juego/`, con
+`port-guide.md`): skill propia del repo que formaliza el flujo para portar un juego nuevo —
+escribir la spec primero, motor sobre el contrato `GameFactory`, entrada en el catálogo
+(`lib/games.ts`), CSS de portada, línea en `lib/games/registry.ts`, fila en la tabla `games`
+vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proceso cuando se
+agregue un juego.
+
+`/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README) siguen siendo el flujo
+general de Spec Driven Design. Ya hay 10 specs en `specs/01-...` a `specs/10-juego-snake.md`;
+seguir el mismo patrón de numeración al agregar una nueva.
 
 ## Stack y convenciones
 
