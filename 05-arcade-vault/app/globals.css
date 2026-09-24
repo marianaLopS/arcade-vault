@@ -3348,6 +3348,7 @@ body {
     --t-pad: 172px;
     --t-gap: 8px;
     --t-pad-y: 8px;
+    --t-nav: var(--av-nav-h, 70px);
     display: flex;
     flex-direction: column;
     height: auto;
@@ -3396,8 +3397,7 @@ body {
   .av-player.has-canvas .crt {
     flex: none;
     height: calc(
-      100svh - var(--av-nav-h, 70px) - var(--t-hud) - var(--t-pad) - 2 * var(--t-gap) - 2 *
-        var(--t-pad-y)
+      100svh - var(--t-nav) - var(--t-hud) - var(--t-pad) - 2 * var(--t-gap) - 2 * var(--t-pad-y)
     );
     min-height: 200px;
     display: flex;
@@ -3419,8 +3419,17 @@ body {
   .av-player.has-canvas .crt-bottom {
     display: none;
   }
-  .player-board {
-    flex: none;
-    overflow: visible;
+  /* Jugando en el móvil sólo cuentan juego y mando: fuera el ranking, la
+     barra de navegación (logo, sesión, menú) y el footer. Se sale con SALIR,
+     en la pausa. */
+  /* La nav oculta mide 0, pero ResizeObserver no avisa de un elemento que ya
+     nace a 0×0: --av-nav-h quedaría en su valor por defecto. Se anula aquí. */
+  .av-player.has-canvas:has(.touch-pad) {
+    --t-nav: 0px;
+  }
+  .av-player.has-canvas .player-board,
+  body:has(.av-player.has-canvas .touch-pad) .av-nav,
+  body:has(.av-player.has-canvas .touch-pad) > footer {
+    display: none;
   }
 }

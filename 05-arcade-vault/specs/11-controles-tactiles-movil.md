@@ -68,12 +68,12 @@ export type TouchControls = {
 
 La cruceta siempre envía `ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`.
 
-| Juego       | A                           | B                          | `repeat` |
-| ----------- | --------------------------- | -------------------------- | -------- |
-| `asteroids` | `Space` · `DISPARO`         | `KeyB` · `BOMBA`           | no       |
-| `caida`     | `KeyX` · `GIRAR`            | `Space` · `CAÍDA`          | sí       |
-| `arkanoid`  | `Space` · `LANZAR`          | `KeyM` · `SONIDO`          | no       |
-| `snake`     | —                           | —                          | no       |
+| Juego       | A                   | B                 | `repeat` |
+| ----------- | ------------------- | ----------------- | -------- |
+| `asteroids` | `Space` · `DISPARO` | `KeyB` · `BOMBA`  | no       |
+| `caida`     | `KeyX` · `GIRAR`    | `Space` · `CAÍDA` | sí       |
+| `arkanoid`  | `Space` · `LANZAR`  | `KeyM` · `SONIDO` | no       |
+| `snake`     | —                   | —                 | no       |
 
 En Asteroids, flecha abajo de la cruceta = escudo, como en teclado.
 
@@ -130,7 +130,8 @@ Bajo `@media (pointer: coarse)`:
 - `.av-player.has-canvas` en columna de alto `100svh - var(--av-nav-h)`: HUD, CRT, mando.
   `.crt-fit` vuelve a ser `container-type: size` para que el canvas encaje por alto (Tetris 420×600)
   o ancho. Marco CRT con menos padding y `.crt-bottom` oculto.
-- El ranking queda debajo, alcanzable con scroll.
+- Sin ranking, barra de navegación (logo, `Iniciar sesión`, menú) ni footer mientras se juega: se sale
+  con `SALIR` desde la pausa.
 - Mando: cruceta a la izquierda, A/B a la derecha, botones de al menos 48 px.
 - Estética coherente con la del sitio (usar la skill `frontend-design`).
 
@@ -152,6 +153,7 @@ Bajo `@media (pointer: coarse)`:
 - [ ] En escritorio (ratón) `/jugar/<juego>` se ve y se juega exactamente igual que antes; no hay mando.
 - [ ] En el móvil real, vertical, `/jugar/asteroids|caida|arkanoid|snake` muestra barra HUD, canvas
       y mando en la primera pantalla sin hacer scroll.
+- [ ] En táctil, `/jugar/<juego>` no muestra el ranking, la barra de navegación ni el footer, y no hay scroll.
 - [ ] Asteroids: cruceta rota/propulsa/escudo; A dispara, B lanza la bomba; propulsar y disparar a la vez funciona.
 - [ ] Tetris: mantener ← / → desplaza la pieza repetidamente; A gira; B deja caer de golpe.
 - [ ] Arkanoid: ← / → mueven la pala; A lanza la bola; B silencia y aparece `SIN SONIDO`.
@@ -179,6 +181,8 @@ Bajo `@media (pointer: coarse)`:
 - **No:** interruptor manual ni detección por ancho.
 - **Sí:** sólo vertical.
 - **Sí:** HUD compacto; skin y SALIR se mueven a la pausa.
+- **Sí:** en táctil, sin ranking, barra de navegación ni footer al jugar (cambio pedido durante la
+  implementación; antes el ranking quedaba bajo el mando, con scroll).
 - **Sí:** bloqueo de gestos sólo en mando y canvas; **no** se desactiva el zoom de la página.
 - **Sí:** vibración; **no** pantalla completa.
 - **Sí:** verificación en el móvil real de la usuaria por LAN.
@@ -187,15 +191,15 @@ Bajo `@media (pointer: coarse)`:
 
 ## Riesgos
 
-| Riesgo | Mitigación |
-| ------ | ---------- |
-| Tocar un botón quita el foco al canvas; su `blur` suelta las teclas en los motores. | `preventDefault()` en `pointerdown`; el foco no se mueve. |
-| Un dedo que sale del botón deja la tecla pulsada para siempre. | `setPointerCapture` + `keyup` en `pointerup`, `pointercancel` y `lostpointercapture`. |
-| Tetris no se mueve al mantener, porque dependía del autorepeat del SO. | `repeat: true` en `caida`. |
-| Canvas + mando no caben en móviles bajos. | `.crt-fit` como contenedor de tamaño; el canvas encoge, el mando mantiene alto fijo. |
-| Desajuste de hidratación al decidir el mando en JS. | Todo por CSS `pointer: coarse`. |
-| `next dev` rechaza el origen del móvil por LAN. | `allowedDevOrigins` en `next.config.ts` con la IP LAN actual (ajuste local de desarrollo). |
-| `navigator.vibrate` no existe (iOS Safari). | Llamada opcional; sin vibración no falla nada. |
+| Riesgo                                                                              | Mitigación                                                                                 |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Tocar un botón quita el foco al canvas; su `blur` suelta las teclas en los motores. | `preventDefault()` en `pointerdown`; el foco no se mueve.                                  |
+| Un dedo que sale del botón deja la tecla pulsada para siempre.                      | `setPointerCapture` + `keyup` en `pointerup`, `pointercancel` y `lostpointercapture`.      |
+| Tetris no se mueve al mantener, porque dependía del autorepeat del SO.              | `repeat: true` en `caida`.                                                                 |
+| Canvas + mando no caben en móviles bajos.                                           | `.crt-fit` como contenedor de tamaño; el canvas encoge, el mando mantiene alto fijo.       |
+| Desajuste de hidratación al decidir el mando en JS.                                 | Todo por CSS `pointer: coarse`.                                                            |
+| `next dev` rechaza el origen del móvil por LAN.                                     | `allowedDevOrigins` en `next.config.ts` con la IP LAN actual (ajuste local de desarrollo). |
+| `navigator.vibrate` no existe (iOS Safari).                                         | Llamada opcional; sin vibración no falla nada.                                             |
 
 ---
 
