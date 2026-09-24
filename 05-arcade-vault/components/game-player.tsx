@@ -6,6 +6,8 @@ import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import { Leaderboard } from "@/components/leaderboard";
 import type { Game, ScoreRow } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
+import { DEFAULT_SKIN, SKIN_IDS, SKIN_LABELS } from "@/lib/games/skins";
+import { useSkin } from "@/lib/games/use-skin";
 import { limpiarIniciales, normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
 /** Puntos que cuesta subir de nivel en la simulación. */
@@ -23,6 +25,7 @@ export function GamePlayer({
 }) {
   const { user } = useSession();
   const entry = getEngine(game.id);
+  const [skin, setSkin] = useSkin(game.id);
   const canvasRef = useRef<GameCanvasHandle>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -119,6 +122,32 @@ export function GamePlayer({
           <Link className="btn ghost" href={`/juegos/${game.id}`}>
             SALIR
           </Link>
+          {/* Cambiar de skin recrea el motor: la partida vuelve a empezar. */}
+          {entry?.skins && (
+            <div className="skin-picker">
+              <div className="skin-picker-label" id="av-skin-label">
+                Skin · reinicia la partida
+              </div>
+              <div className="skin-picker-opts" role="radiogroup" aria-labelledby="av-skin-label">
+                {SKIN_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={skin === id}
+                    className={`skin-opt ${id}`}
+                    disabled={over}
+                    onClick={() => {
+                      if (id !== skin) setSkin(id);
+                    }}
+                  >
+                    <span className="skin-swatch" aria-hidden="true" />
+                    {SKIN_LABELS[id]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <div className="crt">
@@ -131,6 +160,7 @@ export function GamePlayer({
                 ref={canvasRef}
                 entry={entry}
                 paused={paused || over}
+                skin={entry.skins ? skin : DEFAULT_SKIN}
                 onScore={setScore}
                 onLives={setLives}
                 onLevel={setEngineLevel}

@@ -20,6 +20,8 @@ export type GameEngineEntry = {
   height: number;
   /** `aria-label` del canvas: los controles de este juego, en español. */
   controls: string;
+  /** Tiene paletas clasico / neon / retro: GamePlayer muestra el selector. */
+  skins?: boolean;
 };
 export const GAME_ENGINES: Record<string, GameEngineEntry> = {
   asteroids: {
@@ -28,6 +30,7 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     height: 600,
     controls:
       "flechas para rotar y propulsar, espacio para disparar, flecha abajo para el escudo, B para la bomba nova, Shift para la hiperpropulsión",
+    skins: true,
   },
   caida: {
     create: createCaidaGame,

@@ -127,6 +127,12 @@ nunca la borra ni sobrescribe) y `References/resources/resources/implemented-gam
 `lib/games.ts` + `lib/games/registry.ts` para el estado real del catálogo. Úsalo cuando el
 usuario pida ideas, priorización o planificación de qué juego sigue.
 
+`skin-designer` (`.claude/agents/skin-designer.md`): aplica los 3 skins obligatorios
+(`clasico` default, `neon`, `retro`), todos legibles en modo oscuro, **solo al juego que
+indique el usuario**, nunca a todos. Paletas en `lib/games/<slug>/skins.ts`, infra común en
+`lib/games/skins.ts` + selector en `GamePlayer`. Su memoria/guía de estado es
+`References/resources/resources/game-with-themes.md`.
+
 ## Stack y convenciones
 
 - **Next.js 16 (App Router)** + React 19. Ver `AGENTS.md`: esta versión tiene breaking
