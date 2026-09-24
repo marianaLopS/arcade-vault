@@ -43,12 +43,14 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     width: 800,
     height: 600,
     controls: "flechas o ratón para mover la pala, espacio para lanzar la bola, M para silenciar",
+    skins: true,
   },
   snake: {
     create: createSnakeGame,
     width: 800,
     height: 600,
     controls: "flechas o WASD para girar la serpiente",
+    skins: true,
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {

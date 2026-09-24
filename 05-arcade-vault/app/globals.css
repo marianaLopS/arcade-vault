@@ -1163,16 +1163,13 @@ body {
   gap: 10px;
 }
 /* ===== selector de skin =====
-   Tres "cartuchos" pixel. Cada uno lleva una muestra de su paleta y, activo,
-   se enciende con el color de su skin: CLÁSICO blanco sobre negro, NEÓN
-   magenta/cian con glow, RETRO fósforo verde sin glow. */
+   Un <select> nativo con piel de cartucho: muestra de la paleta a la
+   izquierda y chevron pixel a la derecha. El borde toma el color del skin
+   activo: CLÁSICO blanco, NEÓN magenta con glow, RETRO fósforo verde. */
 .skin-picker {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 6px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--line);
 }
 .skin-picker-label {
   font-family: var(--mono);
@@ -1181,91 +1178,100 @@ body {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.skin-picker-opts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.skin-opt {
+.skin-select {
   --skin-c: var(--ink);
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 9px 4px 8px;
+}
+.skin-select.neon {
+  --skin-c: var(--magenta);
+}
+.skin-select.retro {
+  --skin-c: #33ff66;
+}
+.skin-select select {
+  appearance: none;
+  width: 100%;
+  padding: 10px 30px 10px 42px;
   font-family: var(--pixel);
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.08em;
-  color: var(--ink-dim);
-  background: transparent;
-  border: 1px solid var(--line);
+  color: var(--skin-c);
+  background: #05050a;
+  border: 1px solid var(--skin-c);
+  border-radius: 0;
   cursor: pointer;
   clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
   transition:
     color 160ms,
     border-color 160ms,
-    box-shadow 160ms,
-    background-color 160ms;
+    box-shadow 160ms;
 }
-.skin-opt:hover:not(:disabled) {
-  color: var(--ink);
-  border-color: var(--ink-dim);
-}
-.skin-opt:focus-visible {
-  outline: 2px solid var(--yellow);
-  outline-offset: 2px;
-  clip-path: none;
-}
-.skin-opt:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-/* Muestra de la paleta: tres bloques de 4px, como una fila de píxeles. */
-.skin-swatch {
-  display: block;
-  width: 24px;
-  height: 8px;
-  outline: 1px solid rgba(255, 255, 255, 0.12);
-}
-.skin-opt.clasico .skin-swatch {
-  background: linear-gradient(90deg, #000 0 33%, #fff 33% 66%, rgba(255, 130, 0, 0.85) 66%);
-}
-.skin-opt.neon .skin-swatch {
-  background: linear-gradient(90deg, var(--cyan) 0 33%, var(--magenta) 33% 66%, var(--yellow) 66%);
-}
-.skin-opt.retro .skin-swatch {
-  background: linear-gradient(90deg, #071207 0 33%, #33ff66 33% 66%, #ffb000 66%);
-}
-.skin-opt[aria-checked="true"] {
-  color: var(--skin-c);
-  border-color: var(--skin-c);
-}
-.skin-opt.clasico[aria-checked="true"] {
-  --skin-c: var(--ink);
-  background: #000;
-}
-.skin-opt.neon[aria-checked="true"] {
-  --skin-c: var(--magenta);
-  background: #05050a;
+.skin-select.neon select {
   text-shadow: 0 0 6px rgba(255, 0, 110, 0.7);
   box-shadow:
     0 0 10px rgba(255, 0, 110, 0.45),
     inset 0 0 8px rgba(0, 245, 255, 0.35);
 }
-.skin-opt.retro[aria-checked="true"] {
-  --skin-c: #33ff66;
+.skin-select.retro select {
   background: #071207;
+}
+.skin-select select option {
+  color: var(--ink);
+  background: var(--bg);
+}
+.skin-select select:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+  clip-path: none;
+}
+.skin-select select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* Muestra de la paleta activa: tres bloques, como una fila de píxeles. */
+.skin-swatch {
+  position: absolute;
+  left: 11px;
+  width: 21px;
+  height: 7px;
+  outline: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+.skin-select.clasico .skin-swatch {
+  background: linear-gradient(90deg, #000 0 33%, #fff 33% 66%, rgba(255, 130, 0, 0.85) 66%);
+}
+.skin-select.neon .skin-swatch {
+  background: linear-gradient(90deg, var(--cyan) 0 33%, var(--magenta) 33% 66%, var(--yellow) 66%);
+}
+.skin-select.retro .skin-swatch {
+  background: linear-gradient(90deg, #071207 0 33%, #33ff66 33% 66%, #ffb000 66%);
+}
+/* Chevron pixel: una V de 5 px dibujada con bordes. */
+.skin-select::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border-right: 2px solid var(--skin-c);
+  border-bottom: 2px solid var(--skin-c);
+  transform: rotate(45deg);
+  pointer-events: none;
 }
 @media (max-width: 900px) {
   .av-player.has-canvas .hud-actions {
     flex-wrap: wrap;
   }
-  .skin-picker {
+  .av-player.has-canvas .player-hud > div:first-child .skin-picker {
     flex-basis: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skin-opt {
+  .skin-select select {
     transition: none;
   }
 }

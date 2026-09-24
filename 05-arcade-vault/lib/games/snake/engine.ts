@@ -3,7 +3,9 @@
 // No hay original del que portar: las constantes de este archivo son el diseño
 // del juego (SPEC 10, paso 2). Cambiarlas es rediseñar, no implementar. Como en
 // los demás motores, todo el estado vive en la clausura de la factoría.
-import type { GameCallbacks, GameEngine } from "@/lib/games/engine";
+import type { GameCallbacks, GameEngine, GameOptions } from "@/lib/games/engine";
+import { DEFAULT_SKIN } from "@/lib/games/skins";
+import { PALETTES } from "@/lib/games/snake/skins";
 import { FRUIT_SPRITES } from "@/lib/games/snake/sprites";
 const W = 800;
 const H = 600;
@@ -21,9 +23,6 @@ const POINTS_PER_FRUIT = 10;
 const MAX_TURNS = 2;
 const DT_MAX = 50;
 const FRUIT_SRC = "/juegos/snake/fruits.png";
-const GRID_COLOR = "#0f1a12";
-const BODY_COLOR = "#39ff14";
-const HEAD_COLOR = "#b6ff9e";
 type Cell = { x: number; y: number }; // coordenadas de grilla, origen arriba-izquierda
 type Dir = "up" | "down" | "left" | "right";
 const DELTA: Record<Dir, Cell> = {
@@ -39,7 +38,12 @@ function tickMs(level: number): number {
 function sameCell(a: Cell, b: Cell): boolean {
   return a.x === b.x && a.y === b.y;
 }
-export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallbacks): GameEngine {
+export function createSnakeGame(
+  canvas: HTMLCanvasElement,
+  callbacks: GameCallbacks,
+  options?: GameOptions,
+): GameEngine {
+  const pal = PALETTES[options?.skin ?? DEFAULT_SKIN];
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) throw new Error("SNAKE: el canvas no tiene contexto 2D");
   const ctx: CanvasRenderingContext2D = ctx2d;
@@ -134,8 +138,25 @@ export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallba
   // decorado y la lógica no depende de ella.
   const img = new Image();
   let imgReady = false;
+  /** Siluetas planas de cada fruta (skins con `fruitTint`), creadas una vez al cargar. */
+  let tinted: HTMLCanvasElement[] | null = null;
+  function buildTinted(color: string): HTMLCanvasElement[] {
+    return FRUIT_SPRITES.map((s) => {
+      const c = document.createElement("canvas");
+      c.width = s.w;
+      c.height = s.h;
+      const t = c.getContext("2d");
+      if (!t) return c;
+      t.drawImage(img, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+      t.globalCompositeOperation = "source-in";
+      t.fillStyle = color;
+      t.fillRect(0, 0, s.w, s.h);
+      return c;
+    });
+  }
   img.onload = () => {
     if (destroyed) return;
+    if (pal.fruitTint) tinted = buildTinted(pal.fruitTint);
     imgReady = true;
     if (rafId === null) draw(); // pausado o en espera de start(): que se vea la fruta
   };
@@ -162,7 +183,7 @@ export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallba
   }
   // ── Dibujo ──
   function drawGrid() {
-    ctx.strokeStyle = GRID_COLOR;
+    ctx.strokeStyle = pal.grid;
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 1; x < COLS; x++) {
@@ -182,35 +203,51 @@ export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     const scale = Math.min(CELL / s.w, CELL / s.h);
     const dw = s.w * scale;
     const dh = s.h * scale;
+    const dx = fruit.x * CELL + (CELL - dw) / 2;
+    const dy = fruit.y * CELL + (CELL - dh) / 2;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      img,
-      s.x,
-      s.y,
-      s.w,
-      s.h,
-      fruit.x * CELL + (CELL - dw) / 2,
-      fruit.y * CELL + (CELL - dh) / 2,
-      dw,
-      dh,
-    );
+    if (pal.glow > 0) {
+      ctx.shadowBlur = pal.glow;
+      ctx.shadowColor = pal.fruitGlow;
+    }
+    if (tinted) ctx.drawImage(tinted[fruitSprite], dx, dy, dw, dh);
+    else ctx.drawImage(img, s.x, s.y, s.w, s.h, dx, dy, dw, dh);
+    if (pal.glow > 0) ctx.shadowBlur = 0;
   }
   function drawSnake() {
-    for (let i = snake.length - 1; i >= 0; i--) {
-      const c = snake[i];
-      ctx.fillStyle = i === 0 ? HEAD_COLOR : BODY_COLOR;
-      ctx.fillRect(c.x * CELL + 1, c.y * CELL + 1, CELL - 2, CELL - 2);
+    // Las celdas no se solapan: el cuerpo va en un solo path (un único glow
+    // por frame en neón) y la cabeza encima.
+    if (pal.glow > 0) {
+      ctx.shadowBlur = pal.glow;
+      ctx.shadowColor = pal.body;
     }
+    ctx.fillStyle = pal.body;
+    ctx.beginPath();
+    for (let i = snake.length - 1; i > 0; i--) {
+      const c = snake[i];
+      ctx.rect(c.x * CELL + 1, c.y * CELL + 1, CELL - 2, CELL - 2);
+    }
+    ctx.fill();
+    const h = snake[0];
+    if (pal.glow > 0) ctx.shadowColor = pal.head;
+    ctx.fillStyle = pal.head;
+    ctx.fillRect(h.x * CELL + 1, h.y * CELL + 1, CELL - 2, CELL - 2);
+    if (pal.glow > 0) ctx.shadowBlur = 0;
   }
   function drawHint() {
     ctx.font = "20px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#e8e8f0";
+    if (pal.glow > 0) {
+      ctx.shadowBlur = pal.glow;
+      ctx.shadowColor = pal.hint;
+    }
+    ctx.fillStyle = pal.hint;
     ctx.fillText("PULSA UNA FLECHA", W / 2, H / 2 - 3 * CELL);
+    if (pal.glow > 0) ctx.shadowBlur = 0;
   }
   function draw() {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid();
     drawFruit();
@@ -309,6 +346,7 @@ export function createSnakeGame(canvas: HTMLCanvasElement, callbacks: GameCallba
       stopLoop();
       img.onload = null;
       img.onerror = null;
+      tinted = null;
       // Corta la descarga pendiente.
       img.src = "";
       canvas.removeEventListener("keydown", onKeyDown);

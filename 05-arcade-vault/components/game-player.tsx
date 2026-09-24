@@ -6,7 +6,7 @@ import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import { Leaderboard } from "@/components/leaderboard";
 import type { Game, ScoreRow } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
-import { DEFAULT_SKIN, SKIN_IDS, SKIN_LABELS } from "@/lib/games/skins";
+import { DEFAULT_SKIN, isSkinId, SKIN_IDS, SKIN_LABELS } from "@/lib/games/skins";
 import { useSkin } from "@/lib/games/use-skin";
 import { limpiarIniciales, normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
@@ -108,6 +108,31 @@ export function GamePlayer({
             <div className="l">Nivel</div>
             <div className="v">{String(level).padStart(2, "0")}</div>
           </div>
+          {/* Cambiar de skin recrea el motor: la partida vuelve a empezar. */}
+          {entry?.skins && (
+            <div className="skin-picker">
+              <label className="skin-picker-label" htmlFor="av-skin">
+                Tema
+              </label>
+              <div className={`skin-select ${skin}`}>
+                <span className="skin-swatch" aria-hidden="true" />
+                <select
+                  id="av-skin"
+                  value={skin}
+                  disabled={over}
+                  onChange={(e) => {
+                    if (isSkinId(e.target.value)) setSkin(e.target.value);
+                  }}
+                >
+                  {SKIN_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {SKIN_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
         <div className="hud-actions">
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
@@ -122,32 +147,6 @@ export function GamePlayer({
           <Link className="btn ghost" href={`/juegos/${game.id}`}>
             SALIR
           </Link>
-          {/* Cambiar de skin recrea el motor: la partida vuelve a empezar. */}
-          {entry?.skins && (
-            <div className="skin-picker">
-              <div className="skin-picker-label" id="av-skin-label">
-                Skin · reinicia la partida
-              </div>
-              <div className="skin-picker-opts" role="radiogroup" aria-labelledby="av-skin-label">
-                {SKIN_IDS.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={skin === id}
-                    className={`skin-opt ${id}`}
-                    disabled={over}
-                    onClick={() => {
-                      if (id !== skin) setSkin(id);
-                    }}
-                  >
-                    <span className="skin-swatch" aria-hidden="true" />
-                    {SKIN_LABELS[id]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
       <div className="crt">

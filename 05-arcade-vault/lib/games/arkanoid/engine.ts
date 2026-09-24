@@ -13,7 +13,10 @@
 //   · El spritesheet, los sonidos y los listeners se crean dentro de la
 //     factoría y mueren con destroy(); los listeners van sobre el canvas.
 // Todo lo demás —constantes, niveles, física, puntuación— es idéntico al original.
-import type { GameCallbacks, GameEngine, GameFactory } from "@/lib/games/engine";
+import type { GameCallbacks, GameEngine, GameFactory, GameOptions } from "@/lib/games/engine";
+import { PALETTES } from "@/lib/games/arkanoid/skins";
+import { recolorSheet } from "@/lib/games/arkanoid/tint";
+import { DEFAULT_SKIN } from "@/lib/games/skins";
 import type { BlockColor, SpriteFrame } from "@/lib/games/arkanoid/sprites";
 import { EXPLOSION_DURATION, EXPLOSION_FRAMES, SPRITES } from "@/lib/games/arkanoid/sprites";
 // ── Mundo ─────────────────────────────────────────────────────────────────────
@@ -332,6 +335,7 @@ const GAME_KEYS = new Set(["ArrowLeft", "ArrowRight", "Space", "KeyM"]);
 export const createArkanoidGame: GameFactory = (
   canvas: HTMLCanvasElement,
   callbacks: GameCallbacks,
+  options?: GameOptions,
 ): GameEngine => {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) throw new Error("El canvas de Arkanoid no expone un contexto 2D");
@@ -339,6 +343,8 @@ export const createArkanoidGame: GameFactory = (
   const ctx: CanvasRenderingContext2D = ctx2d;
   canvas.width = W;
   canvas.height = H;
+  // Skin: se resuelve una vez. Cambiarlo recrea el motor (components/game-canvas.tsx).
+  const palette = PALETTES[options?.skin ?? DEFAULT_SKIN];
   // Estado de la partida — en la clausura, nunca en el módulo.
   const paddle = new Paddle();
   const ball = new Ball();
@@ -372,7 +378,13 @@ export const createArkanoidGame: GameFactory = (
     const oc = document.createElement("canvas");
     oc.width = rawImg.width;
     oc.height = rawImg.height;
-    oc.getContext("2d")?.drawImage(rawImg, 0, 0);
+    oc.getContext("2d", { willReadFrequently: palette.recolor !== "none" })?.drawImage(
+      rawImg,
+      0,
+      0,
+    );
+    // Una sola vez por motor: el sheet ya sale con los colores del skin.
+    recolorSheet(oc, palette);
     sheet = oc;
     if (rafId === null) draw(); // pausado: al menos se ve el tablero
   };
@@ -479,20 +491,30 @@ export const createArkanoidGame: GameFactory = (
       else state = "gameover";
     }
   }
+  // Glow del skin neón alrededor de un elemento; se resetea siempre después
+  // para no arrastrarlo al resto del frame. Sin glow (clásico, retro), pinta tal cual.
+  function glow(color: string, paint: () => void) {
+    if (palette.glow > 0) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = palette.glow;
+    }
+    paint();
+    if (palette.glow > 0) ctx.shadowBlur = 0;
+  }
   function draw() {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, W, H);
-    blocks.forEach((b) => b.draw(ctx, sheet));
-    paddle.draw(ctx, sheet);
-    ball.draw(ctx, sheet);
+    blocks.forEach((b) => glow(palette.blocks[b.color], () => b.draw(ctx, sheet)));
+    glow(palette.paddle, () => paddle.draw(ctx, sheet));
+    glow(palette.ball, () => ball.draw(ctx, sheet));
     // Encima de pala y bola: el efecto se ve entero aunque la bola pase por ahí
-    explosions.forEach((e) => e.draw(ctx, sheet));
+    explosions.forEach((e) => glow(palette.blocks[e.color], () => e.draw(ctx, sheet)));
     if (muted) {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = palette.text;
       ctx.font = "20px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("SIN SONIDO", W / 2 + 60, 30);
+      glow(palette.text, () => ctx.fillText("SIN SONIDO", W / 2 + 60, 30));
     }
   }
   // ── Bucle principal ────────────────────────────────────────────────────────
