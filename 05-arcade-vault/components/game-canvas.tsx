@@ -8,6 +8,12 @@ export type GameCanvasHandle = {
   restart: () => void;
   /** Devuelve el foco al canvas para que el teclado vuelva a llegar al juego. */
   focus: () => void;
+  /**
+   * Pulsa (`down`) o suelta una tecla sobre el canvas. La usa el mando táctil:
+   * los motores escuchan keydown/keyup en el canvas y deciden por `e.code`, así
+   * que un evento sintético les llega igual que uno del teclado.
+   */
+  key: (code: string, down: boolean) => void;
 };
 type Props = {
   /** Entrada del registro: la factoría, el mundo lógico y los controles. */
@@ -83,6 +89,11 @@ export function GameCanvas({
       canvasRef.current?.focus();
     },
     focus: () => canvasRef.current?.focus(),
+    key: (code, down) => {
+      canvasRef.current?.dispatchEvent(
+        new KeyboardEvent(down ? "keydown" : "keyup", { code, bubbles: true, cancelable: true }),
+      );
+    },
   }));
   // `P` y `Escape` se atienden aquí y no llegan al motor, que sólo consume
   // flechas y espacio. El resto del teclado pasa de largo: no secuestramos

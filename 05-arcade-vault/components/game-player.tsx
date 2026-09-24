@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { guardarScore } from "@/app/jugar/actions";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import { Leaderboard } from "@/components/leaderboard";
+import { TouchPad } from "@/components/touch-pad";
 import type { Game, ScoreRow } from "@/lib/games";
 import { getEngine } from "@/lib/games/registry";
 import { DEFAULT_SKIN, isSkinId, SKIN_IDS, SKIN_LABELS } from "@/lib/games/skins";
@@ -76,6 +77,33 @@ export function GamePlayer({
       else setErrorGuardado(res.error);
     });
   };
+  // El selector de skin vive en el HUD y, en táctil, dentro de la pausa: el
+  // CSS enseña uno u otro. Cada copia necesita su propio `id` para el label.
+  const skinPicker = (id: string) =>
+    entry?.skins && (
+      <div className="skin-picker">
+        <label className="skin-picker-label" htmlFor={id}>
+          Tema
+        </label>
+        <div className={`skin-select ${skin}`}>
+          <span className="skin-swatch" aria-hidden="true" />
+          <select
+            id={id}
+            value={skin}
+            disabled={over}
+            onChange={(e) => {
+              if (isSkinId(e.target.value)) setSkin(e.target.value);
+            }}
+          >
+            {SKIN_IDS.map((sid) => (
+              <option key={sid} value={sid}>
+                {SKIN_LABELS[sid]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
   return (
     <div
       className={`av-player fade-in${entry ? " has-canvas" : ""}`}
@@ -109,30 +137,7 @@ export function GamePlayer({
             <div className="v">{String(level).padStart(2, "0")}</div>
           </div>
           {/* Cambiar de skin recrea el motor: la partida vuelve a empezar. */}
-          {entry?.skins && (
-            <div className="skin-picker">
-              <label className="skin-picker-label" htmlFor="av-skin">
-                Tema
-              </label>
-              <div className={`skin-select ${skin}`}>
-                <span className="skin-swatch" aria-hidden="true" />
-                <select
-                  id="av-skin"
-                  value={skin}
-                  disabled={over}
-                  onChange={(e) => {
-                    if (isSkinId(e.target.value)) setSkin(e.target.value);
-                  }}
-                >
-                  {SKIN_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {SKIN_LABELS[id]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
+          {skinPicker("av-skin")}
         </div>
         <div className="hud-actions">
           <button className="btn yellow" onClick={() => setPaused((p) => !p)}>
@@ -144,7 +149,7 @@ export function GamePlayer({
               FIN
             </button>
           )}
-          <Link className="btn ghost" href={`/juegos/${game.id}`}>
+          <Link className="btn ghost hud-exit" href={`/juegos/${game.id}`}>
             SALIR
           </Link>
         </div>
@@ -195,6 +200,15 @@ export function GamePlayer({
                   >
                     PULSA REANUDAR PARA CONTINUAR
                   </div>
+                  {/* Sólo en táctil: lo que la barra compacta del HUD esconde. */}
+                  {entry?.touch && (
+                    <div className="pause-extras">
+                      {skinPicker("av-skin-pausa")}
+                      <Link className="btn ghost" href={`/juegos/${game.id}`}>
+                        SALIR
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -206,6 +220,13 @@ export function GamePlayer({
           <span>CARGA · 1MB</span>
         </div>
       </div>
+      {entry?.touch && (
+        <TouchPad
+          controls={entry.touch}
+          disabled={paused || over}
+          onKey={(code, down) => canvasRef.current?.key(code, down)}
+        />
+      )}
       {entry && <Leaderboard scores={scores} className="player-board" />}
       {over && (
         <div className="modal-bd">
