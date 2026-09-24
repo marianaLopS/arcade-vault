@@ -3202,6 +3202,11 @@ body {
   grid-template: repeat(3, var(--cell)) / repeat(3, var(--cell));
   filter: drop-shadow(0 4px 0 #050507);
 }
+/* Sin botones de acción (p. ej. SNAKE) la cruceta va sola y se centra. */
+.touch-pad:not(:has(.touch-actions)) .touch-dpad {
+  grid-column: 2;
+  justify-self: center;
+}
 .touch-dpad::before {
   content: "";
   grid-area: 2 / 2;
