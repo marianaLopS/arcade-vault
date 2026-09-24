@@ -141,6 +141,12 @@ indique el usuario**, nunca a todos. Paletas en `lib/games/<slug>/skins.ts`, inf
 `lib/games/skins.ts` + selector en `GamePlayer`. Su memoria/guía de estado es
 `References/resources/resources/game-with-themes.md`.
 
+`mobile-porter` (`.claude/agents/mobile-porter.md`): aplica y verifica el soporte táctil de
+SPEC 11 en **un** juego con motor — declara `touch` en `lib/games/registry.ts`, ajusta CSS
+`pointer: coarse` si hace falta y comprueba con Playwright móvil vertical y escritorio. Nunca
+toca `engine.ts`, el contrato ni Supabase; los juegos en maqueta van antes por `nuevo-juego`.
+Su memoria es `References/resources/resources/mobile-status.md`.
+
 ## Stack y convenciones
 
 - **Next.js 16 (App Router)** + React 19. Ver `AGENTS.md`: esta versión tiene breaking
