@@ -179,6 +179,8 @@ an acceptance criterion in the spec written in Phase 3:
 - [ ] `keydown` / `keyup` / `blur` on the canvas, filtered through a key set before
       `preventDefault()`; `blur` releases everything.
 - [ ] `P` and `Escape` not handled by the engine.
+- [ ] Registry entry declares `touch` (A/B with `code` + `label`, `repeat` only if moves are per
+      `keydown`); no `e.isTrusted` checks, so the mobile pad's synthetic keys reach the engine.
 - [ ] No score / lives / level drawn in the canvas; no GAME OVER overlay; no key-to-restart.
 - [ ] `restart()` works without a remount; `destroy()` is idempotent and leaves nothing running.
 - [ ] Assets under `public/juegos/<slug>/`, and a pending load cannot outlive `destroy()`.

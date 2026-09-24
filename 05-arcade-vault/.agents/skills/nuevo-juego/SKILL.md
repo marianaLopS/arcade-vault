@@ -138,7 +138,8 @@ Then write `specs/NN-juego-<slug>.md`, where `NN` is the next free number in `sp
 - **Estado: `Borrador`.** You do not approve your own spec.
 - **Depende de:** SPEC 05 and SPEC 06 at minimum — the contract and the leaderboard.
 - Objective in one sentence. Scope with both halves: what goes in, and what explicitly does not
-  (sound, touch controls, the other mockup games, anything the original has and the port drops).
+  (sound, gestures, the other mockup games, anything the original has and the port drops).
+  Touch controls are **in** scope by default: they cost one `touch` field (see Phase 6).
 - **Modelo de datos:** for most games this spec creates no table — the engine types already
   exist and the leaderboard only needs one row in `games`. Say that plainly instead of padding
   the section. If Phase 5's registry refactor applies, its `GameEngineEntry` type belongs here.
@@ -219,7 +220,17 @@ Create `lib/games/<slug>/engine.ts` with a single export,
   the canvas, and the returned `{ start, pause, resume, restart, destroy }`.
 - `initGame(); draw();` before returning, so the first frame is visible before `start()`.
 
-Then one line in `GAME_ENGINES` with the entry shape from Phase 5.
+Then one line in `GAME_ENGINES` with the entry shape from Phase 5, **including `touch`**
+(SPEC 11). The mobile pad is shared: a d-pad that always sends the four arrows plus up to two
+action buttons, and it replays them as synthetic `KeyboardEvent`s on the canvas — so the engine
+needs no touch code, only keyboard input on the canvas and no `isTrusted` checks.
+
+- `a` / `b`: `{ code, label }` — the `KeyboardEvent.code` the button mimics and a short
+  Spanish label in capitals (`DISPARO`, `GIRAR`). A is the main action. Omit a button the game
+  does not use: it is not drawn. A game that only needs arrows declares `touch: {}`.
+- `repeat: true` only when the engine moves on each `keydown` (Tetris); engines that read a held
+  key (Asteroids, Arkanoid) leave it out.
+- Without `touch` the game shows no pad on mobile — that is a bug, not a default.
 
 ### Phase 7 — Catalog card and cover
 

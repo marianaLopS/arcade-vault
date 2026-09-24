@@ -54,6 +54,14 @@ puntuación — y cae a una simulación `.game-arena` cuando `getEngine(id)` dev
 (los 4 juegos aún sin motor). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
 mejores puntuaciones dentro de `GamePlayer` cuando `hasLeaderboard` es `true`.
 
+Móvil (SPEC 11): `components/touch-pad.tsx` (`TouchPad`) es un mando virtual común — cruceta
+que envía las cuatro flechas + botones A/B — que sólo se ve con `@media (pointer: coarse)` y en
+vertical. Traduce toques en `KeyboardEvent` sintéticos sobre el canvas
+(`GameCanvasHandle.key(code, down)`), así que los motores no tienen código táctil. El mapeo va en
+el campo `touch` de `GameEngineEntry` (`{ a?, b?: { code, label }, repeat? }`): un botón sin
+mapeo no se pinta, y un juego sin `touch` no tiene mando. En táctil el HUD se reduce a una barra
+y el skin y `SALIR` pasan al overlay de pausa. Ningún motor debe comprobar `e.isTrusted`.
+
 Para agregar un juego nuevo sigue el flujo de la skill `nuevo-juego` (ver sección "skills"),
 no un proceso ad-hoc.
 
