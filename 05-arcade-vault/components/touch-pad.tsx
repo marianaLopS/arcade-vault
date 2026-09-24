@@ -29,11 +29,12 @@ function releaseHeld(h: Held, code: string, onKey: OnKey) {
   h.on = false;
   onKey(code, false);
 }
+/** Flechas de la cruceta: triángulos SVG del Gamepad MK-II (viewBox 24×24). */
 const DPAD = [
-  { code: "ArrowUp", dir: "up", glyph: "▲", label: "Arriba" },
-  { code: "ArrowLeft", dir: "left", glyph: "◀", label: "Izquierda" },
-  { code: "ArrowRight", dir: "right", glyph: "▶", label: "Derecha" },
-  { code: "ArrowDown", dir: "down", glyph: "▼", label: "Abajo" },
+  { code: "ArrowUp", dir: "up", path: "M12 4 L20 16 L4 16 Z", label: "Arriba" },
+  { code: "ArrowLeft", dir: "left", path: "M16 4 L16 20 L4 12 Z", label: "Izquierda" },
+  { code: "ArrowRight", dir: "right", path: "M8 4 L20 12 L8 20 Z", label: "Derecha" },
+  { code: "ArrowDown", dir: "down", path: "M4 8 L20 8 L12 20 Z", label: "Abajo" },
 ] as const;
 function PadButton({
   code,
@@ -137,9 +138,14 @@ export function TouchPad({
             className={`touch-btn touch-dir ${d.dir}`}
             label={d.label}
           >
-            <span aria-hidden="true">{d.glyph}</span>
+            <svg className="touch-arrow" viewBox="0 0 24 24" aria-hidden="true">
+              <path d={d.path} fill="currentColor" />
+            </svg>
           </PadButton>
         ))}
+        <div className="touch-hub" aria-hidden="true">
+          <span className="touch-gem" />
+        </div>
       </div>
       {(a || b) && (
         <div className="touch-actions">
@@ -154,6 +160,7 @@ export function TouchPad({
                 className="touch-btn touch-ab"
                 label={b.label}
               >
+                <span className="touch-ring" aria-hidden="true" />
                 <span aria-hidden="true">B</span>
               </PadButton>
               <span className="touch-label" aria-hidden="true">
@@ -171,6 +178,7 @@ export function TouchPad({
                 className="touch-btn touch-ab"
                 label={a.label}
               >
+                <span className="touch-ring" aria-hidden="true" />
                 <span aria-hidden="true">A</span>
               </PadButton>
               <span className="touch-label" aria-hidden="true">
