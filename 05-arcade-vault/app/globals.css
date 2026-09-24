@@ -3157,3 +3157,270 @@ body {
     padding: 10px 12px;
   }
 }
+/* ===== mando táctil (SPEC 11) =====
+   El panel de mandos de un mueble arcade bajo la pantalla: cruceta de una
+   pieza con las esquinas achaflanadas de `.btn`, y dos botones redondos de
+   recreativa, A magenta y B cian, en diagonal. Siempre está en el DOM; sólo se
+   ve con puntero grueso. `data-on` marca el botón pulsado (touch-pad.tsx). */
+.touch-pad {
+  display: none;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.touch-pad[data-disabled] {
+  opacity: 0.4;
+}
+.touch-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Cruceta: 3×3 celdas; el centro lo pinta el ::before para que la cruz se lea
+   como una sola pieza, y el clip-path le achaflana las puntas. */
+.touch-dpad {
+  --cell: 48px;
+  grid-column: 1;
+  display: grid;
+  grid-template: repeat(3, var(--cell)) / repeat(3, var(--cell));
+  filter: drop-shadow(0 4px 0 #050507);
+}
+.touch-dpad::before {
+  content: "";
+  grid-area: 2 / 2;
+  background: #1b1b22;
+}
+.touch-dir {
+  background: #1b1b22;
+  color: var(--cyan);
+  font-size: 13px;
+  text-shadow: 0 0 6px rgba(0, 245, 255, 0.55);
+  transition:
+    background 80ms,
+    color 80ms;
+}
+.touch-dir.up {
+  grid-area: 1 / 2;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
+}
+.touch-dir.left {
+  grid-area: 2 / 1;
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+.touch-dir.right {
+  grid-area: 2 / 3;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+}
+.touch-dir.down {
+  grid-area: 3 / 2;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px)
+  );
+}
+.touch-dir[data-on] {
+  background: #2a2a35;
+  color: var(--ink);
+  text-shadow: 0 0 10px var(--cyan);
+}
+/* Botones de acción: B abajo a la izquierda, A arriba a la derecha. */
+.touch-actions {
+  grid-column: 3;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding-top: 18px;
+}
+.touch-action {
+  --c: var(--cyan);
+  --c-rgb: 0, 245, 255;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.touch-action.a {
+  --c: var(--magenta);
+  --c-rgb: 255, 0, 110;
+  transform: translateY(-18px);
+}
+.touch-ab {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  font-family: var(--pixel);
+  font-size: 14px;
+  color: #0a0a0f;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.55) 0 7%, transparent 26%), var(--c);
+  box-shadow:
+    0 0 0 3px #050507,
+    0 6px 0 3px #050507,
+    0 0 18px rgba(var(--c-rgb), 0.45);
+  transition:
+    transform 60ms ease,
+    box-shadow 60ms ease;
+}
+.touch-ab[data-on] {
+  transform: translateY(4px);
+  box-shadow:
+    0 0 0 3px #050507,
+    0 2px 0 3px #050507,
+    0 0 28px rgba(var(--c-rgb), 0.9);
+}
+.touch-label {
+  font-family: var(--pixel);
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  color: var(--c);
+  text-shadow: 0 0 6px rgba(var(--c-rgb), 0.5);
+}
+/* Lo que la barra compacta esconde vive en la pausa, sólo en táctil. */
+.pause-extras {
+  display: none;
+  margin-top: 18px;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: center;
+  text-align: left;
+}
+.pause-extras .skin-picker {
+  min-width: 150px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .touch-dir,
+  .touch-ab {
+    transition: none;
+  }
+}
+/* ===== layout táctil vertical =====
+   Va al final para ganar por orden a los @media de ancho del reproductor. HUD y
+   mando tienen alto fijo, así que el CRT puede quedarse exactamente con el resto
+   de la ventana y la primera pantalla es HUD + juego + mando. El reproductor no
+   tiene alto propio: el ranking va debajo y el footer después, sin solaparse.
+     --t-hud / --t-pad   altos fijos de la barra y del mando.
+     --t-gap / --t-pad-y separación entre bloques y relleno vertical. */
+@media (pointer: coarse) {
+  .touch-pad {
+    display: grid;
+    flex: none;
+    height: var(--t-pad);
+  }
+  .pause-extras {
+    display: flex;
+  }
+  .game-canvas {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .av-player.has-canvas {
+    --t-hud: 52px;
+    --t-pad: 172px;
+    --t-gap: 8px;
+    --t-pad-y: 8px;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding: var(--t-pad-y) 12px;
+    gap: var(--t-gap);
+  }
+  .av-player.has-canvas .player-hud {
+    flex: none;
+    height: var(--t-hud);
+    overflow: hidden;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    margin: 0;
+  }
+  .av-player.has-canvas .player-hud > div:first-child {
+    flex-direction: row;
+    flex-wrap: nowrap !important;
+    gap: 14px !important;
+  }
+  .av-player.has-canvas .player-hud .hud-stat:first-child,
+  .av-player.has-canvas .player-hud .skin-picker,
+  .av-player.has-canvas .hud-exit {
+    display: none;
+  }
+  .av-player.has-canvas .hud-stat {
+    gap: 2px;
+  }
+  .av-player.has-canvas .hud-stat .l {
+    font-size: 8px;
+  }
+  .av-player.has-canvas .hud-stat .v {
+    font-size: 12px;
+  }
+  .av-player.has-canvas .hud-actions {
+    flex-direction: row;
+  }
+  .av-player.has-canvas .hud-actions .btn {
+    width: auto;
+    padding: 10px 12px;
+    font-size: 9px;
+  }
+  .av-player.has-canvas .crt {
+    flex: none;
+    height: calc(
+      100svh - var(--av-nav-h, 70px) - var(--t-hud) - var(--t-pad) - 2 * var(--t-gap) - 2 *
+        var(--t-pad-y)
+    );
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 8px;
+    border-radius: 18px;
+  }
+  .av-player.has-canvas .crt-fit {
+    flex: 1 1 auto;
+    min-height: 0;
+    container-type: size;
+    display: grid;
+    place-items: center;
+  }
+  .av-player.has-canvas .crt-screen {
+    width: min(100cqw, 100cqh * var(--av-arw) / var(--av-arh));
+  }
+  .av-player.has-canvas .crt-bottom {
+    display: none;
+  }
+  .player-board {
+    flex: none;
+    overflow: visible;
+  }
+}

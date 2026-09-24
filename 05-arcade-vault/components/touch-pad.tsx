@@ -8,10 +8,19 @@ const REPEAT_INTERVAL = 70; // ms
 /** Pulso de vibración al pulsar, donde el navegador lo soporte. */
 const VIBRATE_MS = 10;
 type OnKey = (code: string, down: boolean) => void;
-/** Estado de un botón pulsado. Mutable y estable: vive en una ref. */
-type Held = { on: boolean; timer: ReturnType<typeof setTimeout> | null };
+/**
+ * Estado de un botón pulsado. Mutable y estable: vive en una ref. `el` lleva el
+ * atributo `data-on` mientras está pulsado: con el `preventDefault` del toque,
+ * `:active` no es fiable en móvil y el CSS se engancha a ese atributo.
+ */
+type Held = {
+  on: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+  el: HTMLButtonElement | null;
+};
 /** Suelta el botón si estaba pulsado: corta la repetición y manda un único keyup. */
 function releaseHeld(h: Held, code: string, onKey: OnKey) {
+  h.el?.removeAttribute("data-on");
   if (h.timer !== null) {
     clearTimeout(h.timer);
     h.timer = null;
@@ -43,7 +52,7 @@ function PadButton({
   label: string;
   children: React.ReactNode;
 }) {
-  const held = useRef<Held>({ on: false, timer: null });
+  const held = useRef<Held>({ on: false, timer: null, el: null });
   // `onKey` cambia en cada render del padre; los temporizadores leen la última.
   const onKeyRef = useRef(onKey);
   useEffect(() => {
@@ -80,6 +89,8 @@ function PadButton({
         if (disabled || held.current.on) return;
         e.currentTarget.setPointerCapture(e.pointerId);
         held.current.on = true;
+        held.current.el = e.currentTarget;
+        e.currentTarget.setAttribute("data-on", "");
         onKeyRef.current(code, true);
         navigator.vibrate?.(VIBRATE_MS);
         if (repeat) scheduleRepeat(REPEAT_DELAY);
