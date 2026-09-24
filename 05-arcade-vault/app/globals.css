@@ -1,9 +1,7 @@
 @import "tailwindcss";
-
 /* ===== ARCADE VAULT — theme ===== */
 :root {
   color-scheme: dark;
-
   --bg: #0a0a0f;
   --bg-2: #0f0f18;
   --bg-3: #15151f;
@@ -22,7 +20,6 @@
   --pixel: var(--font-press-start), system-ui, monospace;
   --mono: var(--font-jetbrains-mono), "Courier New", monospace;
 }
-
 /* tokens expuestos como utilidades de Tailwind v4 (bg-bg-2, text-cyan, font-pixel…) */
 @theme inline {
   --color-bg: var(--bg);
@@ -40,25 +37,20 @@
   --color-bronze: var(--bronze);
   --color-line: var(--line);
   --color-line-2: var(--line-2);
-
   /* alias heredados del scaffold */
   --color-background: var(--bg);
   --color-foreground: var(--ink);
-
   --font-pixel: var(--pixel);
   --font-mono: var(--mono);
 }
-
 * {
   box-sizing: border-box;
 }
-
 html,
 body {
   height: 100%;
   margin: 0;
 }
-
 body {
   background: var(--bg);
   color: var(--ink);
@@ -69,19 +61,16 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
-
 button,
 input,
 select {
   font: inherit;
   color: inherit;
 }
-
 a {
   color: inherit;
   text-decoration: none;
 }
-
 /* ===== background: perspective grid + scanlines + vignette ===== */
 .av-bg {
   position: fixed;
@@ -132,7 +121,6 @@ a {
   mix-blend-mode: overlay;
   opacity: 0.6;
 }
-
 .av-noise {
   position: fixed;
   inset: 0;
@@ -141,7 +129,6 @@ a {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   opacity: 0.35;
 }
-
 /* ===== app frame ===== */
 body {
   position: relative;
@@ -153,7 +140,6 @@ body {
 .av-main {
   flex: 1;
 }
-
 /* ===== pixel + neon text ===== */
 .pixel {
   font-family: var(--pixel);
@@ -164,7 +150,6 @@ body {
 .mono {
   font-family: var(--mono);
 }
-
 .neon-cyan {
   color: var(--cyan);
   text-shadow:
@@ -189,7 +174,6 @@ body {
     0 0 6px rgba(0, 255, 136, 0.6),
     0 0 16px rgba(0, 255, 136, 0.35);
 }
-
 .flicker {
   animation: flicker 5s infinite steps(1, end);
 }
@@ -209,7 +193,6 @@ body {
     opacity: 0.35;
   }
 }
-
 /* ===== navbar ===== */
 .av-nav {
   position: sticky;
@@ -304,7 +287,6 @@ body {
 .av-nav .hamburger {
   display: none;
 }
-
 @media (max-width: 840px) {
   .av-nav {
     padding: 12px 16px;
@@ -319,7 +301,6 @@ body {
     display: inline-flex;
   }
 }
-
 .av-mobile-panel {
   position: fixed;
   inset: 0 0 0 auto;
@@ -360,7 +341,6 @@ body {
   opacity: 1;
   pointer-events: auto;
 }
-
 /* ===== generic neon button ===== */
 .btn {
   position: relative;
@@ -402,7 +382,6 @@ body {
 .btn:active {
   transform: translateY(1px) scale(0.98);
 }
-
 .btn.magenta {
   border-color: var(--magenta);
 }
@@ -455,7 +434,6 @@ body {
       inset 0 0 12px rgba(0, 245, 255, 0.45);
   }
 }
-
 /* ===== hero / library ===== */
 .av-hero {
   padding: 64px 32px 32px;
@@ -489,7 +467,6 @@ body {
     opacity: 0;
   }
 }
-
 .av-filters {
   display: flex;
   gap: 12px;
@@ -532,7 +509,6 @@ body {
   font-family: var(--pixel);
   font-size: 11px;
 }
-
 .av-chips {
   display: flex;
   gap: 8px;
@@ -556,7 +532,6 @@ body {
 .chip:hover:not(.active) {
   color: var(--ink);
 }
-
 /* ===== grid + cards ===== */
 .av-grid {
   display: grid;
@@ -566,7 +541,6 @@ body {
   margin: 32px auto 80px;
   padding: 0 32px;
 }
-
 .card {
   position: relative;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
@@ -602,7 +576,6 @@ body {
 .card:hover::before {
   opacity: 0.5;
 }
-
 .card .cover {
   aspect-ratio: 4 / 3;
   position: relative;
@@ -637,7 +610,6 @@ body {
   color: var(--ink-dim);
   min-height: 36px;
 }
-
 .card .row {
   display: flex;
   align-items: center;
@@ -661,13 +633,11 @@ body {
   letter-spacing: 0.06em;
   text-shadow: 0 0 6px rgba(245, 255, 0, 0.6);
 }
-
 /* ===== Cover art generators (pure CSS) ===== */
 .cover-bg {
   position: absolute;
   inset: 0;
 }
-
 .cover-bricks {
   background:
     repeating-linear-gradient(
@@ -686,7 +656,6 @@ body {
   inset: 0;
   background: repeating-linear-gradient(0deg, transparent 0 32px, rgba(0, 0, 0, 0.4) 32px 33px);
 }
-
 .cover-tetro {
   background: radial-gradient(circle at 50% 100%, #2a004a, #0a0a18);
 }
@@ -705,7 +674,6 @@ body {
   filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.4));
   image-rendering: pixelated;
 }
-
 .cover-snake {
   background: linear-gradient(135deg, #003a2a, #0a0a18);
 }
@@ -722,7 +690,6 @@ body {
       calc(50% - 12px) / 12px 12px no-repeat;
   filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
 }
-
 .cover-glot {
   background: radial-gradient(circle at 50% 50%, #1a002a, #0a0a18);
 }
@@ -748,7 +715,6 @@ body {
   font-size: 18px;
   text-shadow: 0 0 6px var(--cyan);
 }
-
 .cover-invaders {
   background: linear-gradient(180deg, #001a3a, #0a0a18);
 }
@@ -768,7 +734,6 @@ body {
     radial-gradient(circle at 50% 80%, var(--cyan) 0 8px, transparent 9px);
   filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
 }
-
 .cover-rocas {
   background: radial-gradient(circle at 50% 50%, #0a0a30, #000);
 }
@@ -793,7 +758,6 @@ body {
   font-size: 22px;
   text-shadow: 0 0 8px var(--yellow);
 }
-
 .cover-rana {
   background: linear-gradient(180deg, #001f2a, #0a0a18);
 }
@@ -806,7 +770,6 @@ body {
     radial-gradient(circle at 50% 55%, var(--green) 0 14px, transparent 15px);
   filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
 }
-
 .cover-duelo {
   background: #0a0a18;
 }
@@ -822,7 +785,6 @@ body {
     radial-gradient(circle at 60% 60%, var(--yellow) 0 5px, transparent 6px);
   filter: drop-shadow(0 0 6px rgba(0, 245, 255, 0.4));
 }
-
 /* ===== detail screen ===== */
 .av-detail {
   display: grid;
@@ -905,7 +867,6 @@ body {
   margin-top: 16px;
   flex-wrap: wrap;
 }
-
 .leaderboard {
   border: 1px solid var(--line);
   background: var(--bg-2);
@@ -959,7 +920,6 @@ body {
   color: var(--bronze);
   text-shadow: 0 0 6px rgba(217, 122, 58, 0.5);
 }
-
 /* Estado vacío de los marcadores: el panel conserva su forma de tabla y muestra
    las plazas sin reclamar, como la tabla por defecto de una recreativa recién
    encendida. Así no hay salto de maquetación entre vacío y lleno. */
@@ -998,7 +958,6 @@ body {
     animation: none;
   }
 }
-
 /* ===== player ===== */
 .av-player {
   max-width: 1100px;
@@ -1203,7 +1162,119 @@ body {
   display: flex;
   gap: 10px;
 }
-
+/* ===== selector de skin =====
+   Un <select> nativo con piel de cartucho: muestra de la paleta a la
+   izquierda y chevron pixel a la derecha. El borde toma el color del skin
+   activo: CLÁSICO blanco, NEÓN magenta con glow, RETRO fósforo verde. */
+.skin-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skin-picker-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.skin-select {
+  --skin-c: var(--ink);
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.skin-select.neon {
+  --skin-c: var(--magenta);
+}
+.skin-select.retro {
+  --skin-c: #33ff66;
+}
+.skin-select select {
+  appearance: none;
+  width: 100%;
+  padding: 10px 30px 10px 42px;
+  font-family: var(--pixel);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--skin-c);
+  background: #05050a;
+  border: 1px solid var(--skin-c);
+  border-radius: 0;
+  cursor: pointer;
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  transition:
+    color 160ms,
+    border-color 160ms,
+    box-shadow 160ms;
+}
+.skin-select.neon select {
+  text-shadow: 0 0 6px rgba(255, 0, 110, 0.7);
+  box-shadow:
+    0 0 10px rgba(255, 0, 110, 0.45),
+    inset 0 0 8px rgba(0, 245, 255, 0.35);
+}
+.skin-select.retro select {
+  background: #071207;
+}
+.skin-select select option {
+  color: var(--ink);
+  background: var(--bg);
+}
+.skin-select select:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+  clip-path: none;
+}
+.skin-select select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* Muestra de la paleta activa: tres bloques, como una fila de píxeles. */
+.skin-swatch {
+  position: absolute;
+  left: 11px;
+  width: 21px;
+  height: 7px;
+  outline: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+.skin-select.clasico .skin-swatch {
+  background: linear-gradient(90deg, #000 0 33%, #fff 33% 66%, rgba(255, 130, 0, 0.85) 66%);
+}
+.skin-select.neon .skin-swatch {
+  background: linear-gradient(90deg, var(--cyan) 0 33%, var(--magenta) 33% 66%, var(--yellow) 66%);
+}
+.skin-select.retro .skin-swatch {
+  background: linear-gradient(90deg, #071207 0 33%, #33ff66 33% 66%, #ffb000 66%);
+}
+/* Chevron pixel: una V de 5 px dibujada con bordes. */
+.skin-select::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border-right: 2px solid var(--skin-c);
+  border-bottom: 2px solid var(--skin-c);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .av-player.has-canvas .hud-actions {
+    flex-wrap: wrap;
+  }
+  .av-player.has-canvas .player-hud > div:first-child .skin-picker {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skin-select select {
+    transition: none;
+  }
+}
 .crt {
   position: relative;
   border-radius: 28px;
@@ -1283,7 +1354,6 @@ body {
   background: var(--green);
   box-shadow: 0 0 6px var(--green);
 }
-
 /* real in-screen game: canvas del tamaño que declare su motor, escalado por CSS.
    El mundo lógico no cambia; aquí sólo se estira el píxel, así que la física es
    la misma sea cual sea el tamaño de la pantalla. La razón la pone el `style`
@@ -1304,7 +1374,6 @@ body {
   outline: 2px solid var(--cyan);
   outline-offset: -2px;
 }
-
 /* fake in-screen game */
 .game-arena {
   position: absolute;
@@ -1372,7 +1441,6 @@ body {
     transform: translate(20px, 10px);
   }
 }
-
 /* game over modal */
 .modal-bd {
   position: fixed;
@@ -1485,7 +1553,6 @@ body {
     border-color: transparent;
   }
 }
-
 /* ===== auth ===== */
 .av-auth-wrap {
   display: flex;
@@ -1607,7 +1674,6 @@ body {
   padding: 12px;
   font-size: 9px;
 }
-
 /* ===== salón ===== */
 .av-hall {
   max-width: 1200px;
@@ -1634,7 +1700,6 @@ body {
   margin: 12px 0 0;
   letter-spacing: 0.1em;
 }
-
 .hall-tabs {
   display: flex;
   gap: 6px;
@@ -1720,7 +1785,6 @@ body {
   margin-top: 6px;
   letter-spacing: 0.12em;
 }
-
 .hall-table {
   border: 1px solid var(--line);
   background: var(--bg-2);
@@ -1803,7 +1867,6 @@ body {
     transform: translateY(0);
   }
 }
-
 @media (max-width: 720px) {
   .hall-table .th,
   .hall-table .tr {
@@ -1831,7 +1894,6 @@ body {
     padding: 0 16px 32px;
   }
 }
-
 /* misc */
 .divider {
   height: 1px;
@@ -1864,7 +1926,6 @@ body {
     transform: none;
   }
 }
-
 /* tweaks */
 .tw-section {
   margin-bottom: 14px;
@@ -1876,7 +1937,6 @@ body {
   letter-spacing: 0.14em;
   margin-bottom: 8px;
 }
-
 /* spinner */
 .spinner {
   display: inline-block;
@@ -1892,16 +1952,13 @@ body {
     transform: rotate(360deg);
   }
 }
-
 /* =====================================================================
    SPEC 02 — bloques portados de templates/home-about/styles.css
    ===================================================================== */
-
 /* ===== HOME PAGE ===== */
 .home {
   position: relative;
 }
-
 .home-hero {
   position: relative;
   min-height: calc(100vh - 60px);
@@ -1987,7 +2044,6 @@ body {
     transform: translateY(6px);
   }
 }
-
 .home-silos {
   position: absolute;
   inset: 0;
@@ -2065,7 +2121,6 @@ body {
     transform: translateY(-14px) rotate(2deg);
   }
 }
-
 .home-section {
   max-width: 1320px;
   margin: 80px auto;
@@ -2093,7 +2148,6 @@ body {
   height: 1px;
   background: linear-gradient(90deg, var(--line), transparent);
 }
-
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -2109,7 +2163,6 @@ body {
     grid-template-columns: 1fr;
   }
 }
-
 .feature-card {
   position: relative;
   padding: 24px 20px;
@@ -2159,7 +2212,6 @@ body {
   font-size: 13px;
   line-height: 1.6;
 }
-
 .mini-rail {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2207,7 +2259,6 @@ body {
   letter-spacing: 0.14em;
   margin-top: 4px;
 }
-
 .home-stats {
   background: linear-gradient(180deg, #06060a, #0c0c14);
   border-top: 1px solid var(--line);
@@ -2272,7 +2323,6 @@ body {
   margin-top: 8px;
   text-transform: uppercase;
 }
-
 .home-final {
   text-align: center;
   padding: 100px 32px 120px;
@@ -2318,7 +2368,6 @@ body {
   font-size: 13px;
   letter-spacing: 0.06em;
 }
-
 .reveal {
   opacity: 0;
   transform: translateY(24px);
@@ -2330,7 +2379,6 @@ body {
   opacity: 1;
   transform: none;
 }
-
 /* ===== ABOUT PAGE ===== */
 .about {
   position: relative;
@@ -2417,7 +2465,6 @@ body {
   color: var(--ink);
   text-shadow: none;
 }
-
 .about-divider {
   max-width: 1200px;
   margin: 60px auto;
@@ -2455,7 +2502,6 @@ body {
     opacity: 0.2;
   }
 }
-
 .about-contact {
   max-width: 1200px;
   margin: 0 auto 80px;
@@ -2521,7 +2567,6 @@ body {
   background: var(--magenta);
   box-shadow: 0 0 6px var(--magenta);
 }
-
 .contact-form {
   background: var(--bg-2);
   border: 1px solid var(--line);
@@ -2579,7 +2624,6 @@ body {
 .contact-form input::placeholder {
   color: var(--ink-faint);
 }
-
 /* Errores de validación del formulario de contacto */
 .field-error,
 .form-error {
@@ -2612,12 +2656,10 @@ body {
     opacity: 0.8;
   }
 }
-
 .btn.press:active {
   transform: translateY(3px) scale(0.99);
   box-shadow: 0 0 6px rgba(0, 245, 255, 0.2) inset;
 }
-
 .terminal-success {
   background: #000;
   border: 1px solid var(--green);
@@ -2679,7 +2721,6 @@ body {
 .term-body .caret {
   animation: blink 1s steps(1) infinite;
 }
-
 /* ===== ACTIVITY (leaderboard + ticker) ===== */
 .activity-grid {
   display: grid;
@@ -2763,7 +2804,6 @@ body {
   border-color: var(--magenta);
   box-shadow: 0 0 8px rgba(255, 0, 110, 0.35);
 }
-
 .ticker {
   padding: 6px 0;
   max-height: 360px;
@@ -2821,7 +2861,6 @@ body {
     grid-column: 1 / -1;
   }
 }
-
 .top-list {
   padding: 10px 18px 18px;
   display: flex;
@@ -2898,7 +2937,6 @@ body {
   position: relative;
   z-index: 1;
 }
-
 /* ===== PRICING ===== */
 .pricing-grid {
   display: grid;
@@ -3014,7 +3052,6 @@ body {
     inset 0 0 8px rgba(255, 0, 110, 0.2);
   z-index: 3;
 }
-
 .pricing-faq {
   display: flex;
   flex-direction: column;
@@ -3045,14 +3082,12 @@ body {
   color: var(--ink-dim);
   line-height: 1.6;
 }
-
 /* =====================================================================
    SPEC 02 — correcciones de desbordamiento horizontal
    El pack home-about no es responsive por debajo de ~420px y la barra de
    navegación ya desbordaba desde SPEC 01. Ambos bloques van al final para
    ganar por cascada sin editar las reglas portadas.
    ===================================================================== */
-
 /* --- Tarjeta de actividad: dejar que la rejilla pueda encoger ---------- */
 .activity-grid {
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
@@ -3062,7 +3097,6 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
 .activity-card,
 .ticker,
 .top-list,
@@ -3080,7 +3114,6 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 /* Bajo 560px cada fila del ticker pasa a dos líneas: jugador + puntuación
    arriba, juego + antigüedad debajo. */
 @media (max-width: 560px) {
@@ -3104,7 +3137,6 @@ body {
     text-align: right;
   }
 }
-
 /* --- Barra de navegación: cabe en pantallas estrechas ----------------- */
 @media (max-width: 840px) {
   .av-nav {

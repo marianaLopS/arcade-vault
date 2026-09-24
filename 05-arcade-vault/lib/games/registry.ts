@@ -20,6 +20,8 @@ export type GameEngineEntry = {
   height: number;
   /** `aria-label` del canvas: los controles de este juego, en español. */
   controls: string;
+  /** Tiene paletas clasico / neon / retro: GamePlayer muestra el selector. */
+  skins?: boolean;
 };
 export const GAME_ENGINES: Record<string, GameEngineEntry> = {
   asteroids: {
@@ -28,6 +30,7 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     height: 600,
     controls:
       "flechas para rotar y propulsar, espacio para disparar, flecha abajo para el escudo, B para la bomba nova, Shift para la hiperpropulsión",
+    skins: true,
   },
   caida: {
     create: createCaidaGame,
@@ -40,12 +43,14 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     width: 800,
     height: 600,
     controls: "flechas o ratón para mover la pala, espacio para lanzar la bola, M para silenciar",
+    skins: true,
   },
   snake: {
     create: createSnakeGame,
     width: 800,
     height: 600,
     controls: "flechas o WASD para girar la serpiente",
+    skins: true,
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {

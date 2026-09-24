@@ -80,11 +80,11 @@ si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`
 El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
 aplicadas con `apply_migration` del MCP de Supabase.
 
-| Objeto       | Qué es                                                                                                                                                                                                                                 |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 4 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake` y mas... mira /home/mariana/Escritorio/claudeCode/05-arcade-vault/References/resources/resources/implemented-games.md cuando lo necesiten.|
-| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                    |
-| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                        |
+| Objeto       | Qué es                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 4 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake` y mas... mira /home/mariana/Escritorio/claudeCode/05-arcade-vault/References/resources/resources/implemented-games.md cuando lo necesiten. |
+| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                                                                                                                                                              |
+| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                                                                                  |
 
 RLS activa en las dos tablas: `select` público, `insert` público en `scores`, y **ninguna**
 política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
@@ -115,6 +115,23 @@ agregue un juego.
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README) siguen siendo el flujo
 general de Spec Driven Design. Ya hay 10 specs en `specs/01-...` a `specs/10-juego-snake.md`;
 seguir el mismo patrón de numeración al agregar una nueva.
+
+## Agentes
+
+`game-planner` (`.claude/agents/game-planner.md`): agente de planificación — decide qué juego
+portar o incorporar a continuación (de los 4 en maqueta, o uno nuevo) y registra la decisión.
+Solo planifica: nunca implementa motor, specs ni migraciones (eso lo hace la skill
+`nuevo-juego`). Lee su memoria en
+`References/resources/resources/game-suggestions-todo.md` (histórico de sugerencias previas,
+nunca la borra ni sobrescribe) y `References/resources/resources/implemented-games.md` +
+`lib/games.ts` + `lib/games/registry.ts` para el estado real del catálogo. Úsalo cuando el
+usuario pida ideas, priorización o planificación de qué juego sigue.
+
+`skin-designer` (`.claude/agents/skin-designer.md`): aplica los 3 skins obligatorios
+(`clasico` default, `neon`, `retro`), todos legibles en modo oscuro, **solo al juego que
+indique el usuario**, nunca a todos. Paletas en `lib/games/<slug>/skins.ts`, infra común en
+`lib/games/skins.ts` + selector en `GamePlayer`. Su memoria/guía de estado es
+`References/resources/resources/game-with-themes.md`.
 
 ## Stack y convenciones
 
