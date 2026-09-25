@@ -110,6 +110,33 @@ const GOAL_COLS = [1, 4, 7, 10, 13];
 const TIME_BAR_H = 3; // px superiores de la fila 0: barra de tiempo
 const HUD_PAD = 14; // margen lateral del HUD: la esquina redondeada del CRT no lo tapa
 const GOAL_TOP = 6; // px: las bocas empiezan bajo la barra de tiempo
+// ── Constantes de dibujo: fuera del frame para que draw() no asigne nada ──
+const SIDES = [-1, 1] as const;
+const FROG_ANGLE: Record<Direction, number> = {
+  up: 0,
+  right: Math.PI / 2,
+  down: Math.PI,
+  left: -Math.PI / 2,
+};
+const LANE_DASH = [12, 12];
+const NO_DASH: number[] = [];
+/** Vetas del tronco: [y relativa a la fila, margen horizontal]. */
+const LOG_GRAIN = [
+  [15, 18],
+  [21, 28],
+  [27, 14],
+] as const;
+/** Aletas de la tortuga: desplazamiento [x, y] desde el centro. */
+const TURTLE_FLIPPERS = [
+  [-9, -11],
+  [9, -11],
+  [-9, 11],
+  [9, 11],
+] as const;
+/** Placas del caparazón: 6 radios, cos/sin precalculados. */
+const SHELL_COS = [0, 1, 2, 3, 4, 5].map((a) => Math.cos((a * Math.PI) / 3));
+const SHELL_SIN = [0, 1, 2, 3, 4, 5].map((a) => Math.sin((a * Math.PI) / 3));
+const HUD_FONT = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
 const DELTA: Record<Direction, { col: number; row: number }> = {
   up: { col: 0, row: -1 },
   down: { col: 0, row: 1 },
@@ -170,6 +197,9 @@ export function createFroggerGame(
   const ctx: CanvasRenderingContext2D = ctx2d;
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
+  // Estado de texto fijo: se asigna una vez (save/restore de la rana lo conserva).
+  ctx.font = HUD_FONT;
+  ctx.textBaseline = "middle";
   // Paleta del skin, resuelta una vez (ver lib/games/frogger/skins.ts).
   const pal = PALETTES[options?.skin ?? DEFAULT_SKIN];
   // ── Estado de la partida ──
@@ -356,17 +386,17 @@ export function createFroggerGame(
     // Marcas de carril discontinuas entre las filas de carretera.
     ctx.strokeStyle = pal.lane;
     ctx.lineWidth = 2;
-    ctx.setLineDash([12, 12]);
+    ctx.setLineDash(LANE_DASH);
     ctx.beginPath();
     for (let row = ROW_ROAD_TOP + 1; row <= ROW_ROAD_BOT; row++) {
       ctx.moveTo(0, row * CELL);
       ctx.lineTo(CANVAS_W, row * CELL);
     }
     ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.setLineDash(NO_DASH);
   }
   function drawFrogShape(cx: number, cy: number, dir: Direction, jumping: boolean, alpha = 1) {
-    const angle = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[dir];
+    const angle = FROG_ANGLE[dir];
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(cx, cy);
@@ -374,7 +404,7 @@ export function createFroggerGame(
     // Patas: recogidas en reposo, extendidas durante el salto.
     const reach = jumping ? 16 : 11;
     ctx.fillStyle = pal.frogDark;
-    for (const sx of [-1, 1]) {
+    for (const sx of SIDES) {
       ctx.fillRect(sx * reach - 3, -reach + 2, 6, 6);
       ctx.fillRect(sx * reach - 3, reach - 8, 6, 6);
     }
@@ -384,7 +414,7 @@ export function createFroggerGame(
     ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     noGlow();
-    for (const sx of [-1, 1]) {
+    for (const sx of SIDES) {
       ctx.fillStyle = pal.eyeWhite;
       ctx.beginPath();
       ctx.arc(sx * 6, -9, 4, 0, Math.PI * 2);
@@ -404,8 +434,8 @@ export function createFroggerGame(
   function drawGoals() {
     // Bocas como nichos abiertos por arriba: laterales y fondo con borde.
     const h = CELL - GOAL_TOP - 2;
-    GOAL_COLS.forEach((col, i) => {
-      const x = col * CELL + 3;
+    for (let i = 0; i < GOAL_COLS.length; i++) {
+      const x = GOAL_COLS[i] * CELL + 3;
       const w = 2 * CELL - 6;
       ctx.fillStyle = pal.goal;
       ctx.fillRect(x, GOAL_TOP, w, h);
@@ -420,12 +450,13 @@ export function createFroggerGame(
       ctx.stroke();
       noGlow();
       if (goals[i]) drawFrogShape(x + w / 2, GOAL_TOP + h / 2 + 2, "down", false, 0.9);
-    });
+    }
   }
   /** Ruedas: bloques oscuros que asoman por arriba y por abajo de la carrocería. */
   function drawWheels(x: number, y: number, w: number) {
     ctx.fillStyle = pal.wheel;
-    for (const wx of [x + 6, x + w - 16]) {
+    for (let k = 0; k < 2; k++) {
+      const wx = k === 0 ? x + 6 : x + w - 16;
       ctx.fillRect(wx, y + 7, 10, 5);
       ctx.fillRect(wx, y + CELL - 12, 10, 5);
     }
@@ -497,16 +528,13 @@ export function createFroggerGame(
     ctx.strokeStyle = pal.logLine;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    for (const [ly, inset] of [
-      [y + 15, 18],
-      [y + 21, 28],
-      [y + 27, 14],
-    ]) {
-      ctx.moveTo(x + inset, ly);
-      ctx.lineTo(x + w - inset, ly);
+    for (const [dy, inset] of LOG_GRAIN) {
+      ctx.moveTo(x + inset, y + dy);
+      ctx.lineTo(x + w - inset, y + dy);
     }
     ctx.stroke();
-    for (const ex of [x + 10, x + w - 10]) {
+    for (let k = 0; k < 2; k++) {
+      const ex = k === 0 ? x + 10 : x + w - 10;
       ctx.fillStyle = pal.logEnd;
       ctx.beginPath();
       ctx.ellipse(ex, y + CELL / 2, 6, 11, 0, 0, Math.PI * 2);
@@ -540,12 +568,7 @@ export function createFroggerGame(
       if (sinking) ctx.globalAlpha = 0.55;
       // Aletas y cabeza, asomando del caparazón hacia el sentido de avance.
       ctx.fillStyle = pal.turtleScale;
-      for (const [fx, fy] of [
-        [-9, -11],
-        [9, -11],
-        [-9, 11],
-        [9, 11],
-      ]) {
+      for (const [fx, fy] of TURTLE_FLIPPERS) {
         ctx.beginPath();
         ctx.ellipse(cx + fx, cy + fy, 5, 3, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -564,10 +587,9 @@ export function createFroggerGame(
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.ellipse(cx, cy, 5, 4, 0, 0, Math.PI * 2);
-      for (const a of [0, 1, 2, 3, 4, 5]) {
-        const ang = (a * Math.PI) / 3;
-        ctx.moveTo(cx + Math.cos(ang) * 5, cy + Math.sin(ang) * 4);
-        ctx.lineTo(cx + Math.cos(ang) * 12, cy + Math.sin(ang) * 10);
+      for (let a = 0; a < 6; a++) {
+        ctx.moveTo(cx + SHELL_COS[a] * 5, cy + SHELL_SIN[a] * 4);
+        ctx.lineTo(cx + SHELL_COS[a] * 12, cy + SHELL_SIN[a] * 10);
       }
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -594,6 +616,26 @@ export function createFroggerGame(
     const row = frog.row + (frog.targetRow - frog.row) * t;
     drawFrogShape(col * CELL + CELL / 2, row * CELL + CELL / 2, facing, frog.animating);
   }
+  // Caché del HUD: textos y anchos del último valor pintado.
+  let hudScore = -1;
+  let hudScoreText = "";
+  let hudScoreW = 0;
+  let hudLevel = -1;
+  let hudLevelText = "";
+  let hudLevelW = 0;
+  const HUD_TY = GOAL_TOP + 12;
+  /** Etiqueta del HUD sobre su fondo oscuro; `tw` es el ancho ya medido. */
+  function hudLabel(text: string, tw: number, x: number, align: CanvasTextAlign, color: string) {
+    ctx.textAlign = align;
+    const left = align === "left" ? x : align === "center" ? x - tw / 2 : x - tw;
+    ctx.fillStyle = pal.hudBg;
+    roundRect(left - 5, HUD_TY - 9, tw + 10, 18, 3);
+    ctx.fill();
+    ctx.fillStyle = color;
+    glow(color);
+    ctx.fillText(text, x, HUD_TY + 1);
+    noGlow();
+  }
   function drawHud() {
     // Barra de tiempo a lo ancho, pegada arriba.
     const ratio = timeLeft / roundTimeMs(level);
@@ -603,35 +645,31 @@ export function createFroggerGame(
     ctx.fillRect(0, 0, CANVAS_W * ratio, TIME_BAR_H);
     noGlow();
     // Textos con fondo propio: se leen igual sobre una boca vacía u ocupada.
-    ctx.font = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textBaseline = "middle";
-    const ty = GOAL_TOP + 12;
-    const label = (text: string, x: number, align: CanvasTextAlign, color: string) => {
-      ctx.textAlign = align;
-      const tw = ctx.measureText(text).width;
-      const left = align === "left" ? x : align === "center" ? x - tw / 2 : x - tw;
-      ctx.fillStyle = pal.hudBg;
-      roundRect(left - 5, ty - 9, tw + 10, 18, 3);
-      ctx.fill();
-      ctx.fillStyle = color;
-      glow(color);
-      ctx.fillText(text, x, ty + 1);
-      noGlow();
-    };
-    label("SCORE " + String(score).padStart(6, "0"), HUD_PAD, "left", pal.hudScore);
-    label("LVL " + String(level).padStart(2, "0"), CANVAS_W / 2, "center", pal.hudLevel);
+    // Texto y ancho se recalculan sólo cuando cambia el valor.
+    if (score !== hudScore) {
+      hudScore = score;
+      hudScoreText = "SCORE " + String(score).padStart(6, "0");
+      hudScoreW = ctx.measureText(hudScoreText).width;
+    }
+    if (level !== hudLevel) {
+      hudLevel = level;
+      hudLevelText = "LVL " + String(level).padStart(2, "0");
+      hudLevelW = ctx.measureText(hudLevelText).width;
+    }
+    hudLabel(hudScoreText, hudScoreW, HUD_PAD, "left", pal.hudScore);
+    hudLabel(hudLevelText, hudLevelW, CANVAS_W / 2, "center", pal.hudLevel);
     // Vidas: una rana pequeña (círculo) por vida, alineadas a la derecha.
     const livesW = lives * 14;
     if (lives > 0) {
       ctx.fillStyle = pal.hudBg;
-      roundRect(CANVAS_W - HUD_PAD - livesW - 3, ty - 9, livesW + 6, 18, 3);
+      roundRect(CANVAS_W - HUD_PAD - livesW - 3, HUD_TY - 9, livesW + 6, 18, 3);
       ctx.fill();
     }
     ctx.fillStyle = pal.frog;
     glow(pal.frog);
     for (let i = 0; i < lives; i++) {
       ctx.beginPath();
-      ctx.arc(CANVAS_W - HUD_PAD - 7 - i * 14, ty, 5, 0, Math.PI * 2);
+      ctx.arc(CANVAS_W - HUD_PAD - 7 - i * 14, HUD_TY, 5, 0, Math.PI * 2);
       ctx.fill();
     }
     noGlow();
