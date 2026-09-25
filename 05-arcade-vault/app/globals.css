@@ -758,10 +758,10 @@ body {
   font-size: 22px;
   text-shadow: 0 0 8px var(--yellow);
 }
-.cover-rana {
+.cover-frogger {
   background: linear-gradient(180deg, #001f2a, #0a0a18);
 }
-.cover-rana::after {
+.cover-frogger::after {
   content: "";
   position: absolute;
   inset: 0;
