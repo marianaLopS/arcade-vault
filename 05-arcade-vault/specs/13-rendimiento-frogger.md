@@ -157,6 +157,11 @@ página sube de 5 a 45 fps, y los renders de `GamePlayer` en 60 s son 7–9. Dom
 | neon    | 11 / 1016,7 ms / 161 / 7 / 18,5 MB        |                                             | Pintado del canvas¹   |           |
 | retro   | 3 / 1131,2 ms / 157 / 8 / 19,4 MB         |                                             | Pintado del canvas¹   |           |
 
+**Memoria (paso 5)**, headless, `clasico`, heap JS tras GC forzado por CDP: 9,33 MB a los 10 s y
+9,36 MB a los 70 s de partida (+0,03 MB). Tras 5 cambios de skin: 9,27 → 9,37 MB, 1 solo
+`HTMLCanvasElement` vivo y el canvas con 1 listener `keydown` y 1 `blur` (los motores anteriores se
+destruyen). Sin fugas: no hubo nada que corregir.
+
 ## Criterios de aceptación
 
 - [ ] `npm run build` y `npm run lint` limpios.
