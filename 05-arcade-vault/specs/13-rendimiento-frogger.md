@@ -141,13 +141,21 @@ declare global {
 
 ## Resultados
 
-Chrome de la usuaria, `/jugar/frogger?fps=1`, 60 s de partida con input.
+`/jugar/frogger?fps=1`, 60 s de partida con input (flechas cada 700 ms).
+
+**Antes** medido en Chromium headless de Playwright (sin GPU) contra `npm run dev`, por decisión
+de la usuaria en lugar de su Chrome. Equipo bajo presión de memoria durante la medida: 3,7 GB de
+RAM con 384 MB disponibles, 4,9 GB de swap en uso, carga media ~10,8 en 4 núcleos. Los números
+absolutos no son fiables; sirven para comparar Antes/Después en la misma máquina.
+
+¹ Sin perfil de DevTools: con el canvas en `visibility: hidden` (el motor sigue dibujando) la
+página sube de 5 a 45 fps, y los renders de `GamePlayer` en 60 s son 7–9. Domina el pintado, no React.
 
 | Skin    | Antes fps / p95 / >50 ms / renders / heap | Después fps / p95 / >50 ms / renders / heap | Qué dominaba (paso 2) | Pendiente |
 | ------- | ----------------------------------------- | ------------------------------------------- | --------------------- | --------- |
-| clasico |                                           |                                             |                       |           |
-| neon    |                                           |                                             |                       |           |
-| retro   |                                           |                                             |                       |           |
+| clasico | 18 / 1116,6 ms / 174 / 9 / 18,4 MB        |                                             | Pintado del canvas¹   |           |
+| neon    | 11 / 1016,7 ms / 161 / 7 / 18,5 MB        |                                             | Pintado del canvas¹   |           |
+| retro   | 3 / 1131,2 ms / 157 / 8 / 19,4 MB         |                                             | Pintado del canvas¹   |           |
 
 ## Criterios de aceptación
 
