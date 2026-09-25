@@ -148,14 +148,19 @@ de la usuaria en lugar de su Chrome. Equipo bajo presión de memoria durante la 
 RAM con 384 MB disponibles, 4,9 GB de swap en uso, carga media ~10,8 en 4 núcleos. Los números
 absolutos no son fiables; sirven para comparar Antes/Después en la misma máquina.
 
+**Después** medido igual (headless, `npm run dev`), con carga media ~6 y 5 GB de swap. El `fps` es
+el de la última ventana de 0,5 s y varía mucho entre corridas (clasico bajó y neon/retro subieron
+sin cambios que los distingan): la comparación fiable es `renders` (7–9 → 4, sólo arranque) y
+heap (18–19 → 14 MB). p95 y frames > 50 ms siguen en el mismo orden: el cuello no era React.
+
 ¹ Sin perfil de DevTools: con el canvas en `visibility: hidden` (el motor sigue dibujando) la
 página sube de 5 a 45 fps, y los renders de `GamePlayer` en 60 s son 7–9. Domina el pintado, no React.
 
-| Skin    | Antes fps / p95 / >50 ms / renders / heap | Después fps / p95 / >50 ms / renders / heap | Qué dominaba (paso 2) | Pendiente |
-| ------- | ----------------------------------------- | ------------------------------------------- | --------------------- | --------- |
-| clasico | 18 / 1116,6 ms / 174 / 9 / 18,4 MB        |                                             | Pintado del canvas¹   |           |
-| neon    | 11 / 1016,7 ms / 161 / 7 / 18,5 MB        |                                             | Pintado del canvas¹   |           |
-| retro   | 3 / 1131,2 ms / 157 / 8 / 19,4 MB         |                                             | Pintado del canvas¹   |           |
+| Skin    | Antes fps / p95 / >50 ms / renders / heap | Después fps / p95 / >50 ms / renders / heap | Qué dominaba (paso 2) | Pendiente                                                                       |
+| ------- | ----------------------------------------- | ------------------------------------------- | --------------------- | ------------------------------------------------------------------------------- |
+| clasico | 18 / 1116,6 ms / 174 / 9 / 18,4 MB        | 8 / 1283,2 ms / 146 / 4 / 13,7 MB           | Pintado del canvas¹   | No cumple: domina el pintado del canvas → spec futura de arquitectura de dibujo |
+| neon    | 11 / 1016,7 ms / 161 / 7 / 18,5 MB        | 21 / 683,2 ms / 183 / 4 / 14,0 MB           | Pintado del canvas¹   | No cumple: domina el pintado del canvas → spec futura de arquitectura de dibujo |
+| retro   | 3 / 1131,2 ms / 157 / 8 / 19,4 MB         | 25 / 366,7 ms / 209 / 4 / 14,8 MB           | Pintado del canvas¹   | No cumple: domina el pintado del canvas → spec futura de arquitectura de dibujo |
 
 **Memoria (paso 5)**, headless, `clasico`, heap JS tras GC forzado por CDP: 9,33 MB a los 10 s y
 9,36 MB a los 70 s de partida (+0,03 MB). Tras 5 cambios de skin: 9,27 → 9,37 MB, 1 solo
