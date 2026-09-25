@@ -77,6 +77,16 @@ export function GamePlayer({
       else setErrorGuardado(res.error);
     });
   };
+  // Nueva partida desde el modal: el motor se reinicia y vuelve a avisar de
+  // score, vidas y nivel; aquí sólo se limpia el estado del fin de partida.
+  const jugarDeNuevo = () => {
+    setOver(false);
+    setSaved(false);
+    setErrorGuardado(null);
+    setPaused(false);
+    setScore(0);
+    canvasRef.current?.restart();
+  };
   // El selector de skin vive en el HUD y, en táctil, dentro de la pausa: el
   // CSS enseña uno u otro. Cada copia necesita su propio `id` para el label.
   const skinPicker = (id: string) =>
@@ -260,6 +270,11 @@ export function GamePlayer({
                 <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
               ))}
             <div className="actions">
+              {entry && (
+                <button className="btn yellow" onClick={jugarDeNuevo}>
+                  JUGAR DE NUEVO
+                </button>
+              )}
               <Link className="btn magenta" href={`/salon?juego=${game.id}`}>
                 VOLVER AL LEADERBOARD
               </Link>

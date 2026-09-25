@@ -7,6 +7,7 @@ import type { GameFactory } from "@/lib/games/engine";
 import { createArkanoidGame } from "@/lib/games/arkanoid/engine";
 import { createAsteroidsGame } from "@/lib/games/asteroids/engine";
 import { createCaidaGame } from "@/lib/games/caida/engine";
+import { createFroggerGame } from "@/lib/games/frogger/engine";
 import { createSnakeGame } from "@/lib/games/snake/engine";
 /** Un botón de acción del mando táctil: la tecla que imita y su rótulo. */
 export type TouchButton = { code: string; label: string };
@@ -75,6 +76,12 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     controls: "flechas o WASD para girar la serpiente",
     skins: true,
     touch: {},
+  },
+  frogger: {
+    create: createFroggerGame,
+    width: 640,
+    height: 560,
+    controls: "flechas o WASD para saltar una casilla",
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {
