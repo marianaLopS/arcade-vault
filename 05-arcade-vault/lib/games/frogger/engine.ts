@@ -100,6 +100,7 @@ const ROUND_TIME_MIN = 8; // s: −1 s por nivel hasta aquí
 const POINTS_PER_ROW = 10;
 const POINTS_PER_GOAL = 50;
 const POINTS_PER_SECOND_LEFT = 10;
+const POINTS_PER_ROUND = 200;
 /** Bocas destino de la fila 0: 2 columnas cada una, separadas por 1 de muro. */
 const GOAL_COLS = [1, 4, 7, 10, 13];
 const HUD_BAND = 12; // px superiores de la fila 0 para el texto del HUD
@@ -254,6 +255,16 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     frog.targetCol = targetCol;
     frog.targetRow = targetRow;
   }
+  /** Las 5 bocas llenas: sube el nivel, carriles más rápidos y reloj más corto. */
+  function completeRound() {
+    score += POINTS_PER_ROUND;
+    goals = GOAL_COLS.map(() => false);
+    level++;
+    // onLevel lo emite emit() en este mismo frame, al detectar el cambio.
+    lanes = buildLanes(level);
+    // Después de subir el nivel: el reloj de la rana nueva ya es el del nivel siguiente.
+    resetFrog();
+  }
   /** Muerte de la rana. Provisional hasta killFrog (paso 7): sin restar vida. */
   function die() {
     resetFrog();
@@ -268,7 +279,8 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     if (frog.row === ROW_GOALS) {
       if (checkGoal(frog, goals) === -1) return die();
       score += POINTS_PER_GOAL + Math.floor(timeLeft / 1000) * POINTS_PER_SECOND_LEFT;
-      resetFrog();
+      if (goals.every(Boolean)) completeRound();
+      else resetFrog();
     }
   }
   function updateFrog(dt: number) {
