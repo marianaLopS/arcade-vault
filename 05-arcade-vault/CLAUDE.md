@@ -124,6 +124,12 @@ agregue un juego.
 general de Spec Driven Design. Ya hay 10 specs en `specs/01-...` a `specs/10-juego-snake.md`;
 seguir el mismo patrón de numeración al agregar una nueva.
 
+`/spec-impl-game` (skill propia en `.agents/skills/spec-impl-game/`, symlink en
+`.claude/skills/`): para specs de **juegos**. Sigue las Fases 1–4 de `/spec-impl` leyendo su
+`SKILL.md` (no la duplica ni la modifica; también busca en `specs/game-jam/<id>/`), luego
+`lint` + `build` y lanza en secuencia, nunca en paralelo, `skin-designer` y después
+`mobile-porter` sobre el slug implementado. No hace commits.
+
 ## Agentes
 
 `game-planner` (`.claude/agents/game-planner.md`): agente de planificación — decide qué juego
