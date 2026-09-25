@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { guardarScore } from "@/app/jugar/actions";
+import { FpsMeter } from "@/components/fps-meter";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
 import { Leaderboard } from "@/components/leaderboard";
 import { TouchPad } from "@/components/touch-pad";
@@ -28,6 +29,11 @@ export function GamePlayer({
   const entry = getEngine(game.id);
   const [skin, setSkin] = useSkin(game.id);
   const canvasRef = useRef<GameCanvasHandle>(null);
+  /** Renders confirmados de este componente; lo lee el medidor `?fps=1`. */
+  const renders = useRef(0);
+  useEffect(() => {
+    renders.current++;
+  });
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [engineLevel, setEngineLevel] = useState(1);
@@ -193,6 +199,7 @@ export function GamePlayer({
                 <div className="player-ship" />
               </div>
             )}
+            {entry && <FpsMeter renders={renders} />}
             {paused && (
               <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
                 <div>

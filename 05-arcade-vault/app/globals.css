@@ -3522,3 +3522,20 @@ body {
     display: none;
   }
 }
+/* ===== medidor de rendimiento ?fps=1 (SPEC 13) ===== */
+.fps-meter {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 6;
+  margin: 0;
+  padding: 4px 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--green);
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: pre;
+}
