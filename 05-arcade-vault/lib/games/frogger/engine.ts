@@ -4,7 +4,9 @@
 // del juego (SPEC game-jam/ranaria/01, paso 2). Todo se dibuja con primitivas
 // canvas, sin sprites. Como en los demás motores, el estado vive en la clausura
 // de la factoría.
-import type { GameCallbacks, GameEngine } from "@/lib/games/engine";
+import type { GameCallbacks, GameEngine, GameOptions } from "@/lib/games/engine";
+import { PALETTES } from "@/lib/games/frogger/skins";
+import { DEFAULT_SKIN } from "@/lib/games/skins";
 const COLS = 16;
 const ROWS = 14;
 const CELL = 40; // px
@@ -43,9 +45,11 @@ interface Frog {
 }
 // ── Carriles ──
 const LEVEL_SPEEDUP = 1.15; // +15 % de velocidad por nivel
-const TURTLE_VISIBLE_MS = 3000;
+const TURTLE_VISIBLE_MS = 5000;
 const TURTLE_DIVE_MS = 1500;
 const TURTLE_CYCLE_MS = TURTLE_VISIBLE_MS + TURTLE_DIVE_MS;
+/** Último tramo visible en el que las tortugas parpadean antes de sumergirse. */
+const TURTLE_WARN_MS = 900;
 /**
  * Diseño de cada carril a nivel 1. `speed` en px/frame (a 60 fps); `count`
  * entidades repartidas a espacio constante en el bucle de COLS + width celdas,
@@ -103,38 +107,14 @@ const POINTS_PER_SECOND_LEFT = 10;
 const POINTS_PER_ROUND = 200;
 /** Bocas destino de la fila 0: 2 columnas cada una, separadas por 1 de muro. */
 const GOAL_COLS = [1, 4, 7, 10, 13];
-const HUD_BAND = 12; // px superiores de la fila 0 para el texto del HUD
-const TIME_BAR_H = 4; // px inferiores de la fila 0 para la barra de tiempo
+const TIME_BAR_H = 3; // px superiores de la fila 0: barra de tiempo
+const HUD_PAD = 14; // margen lateral del HUD: la esquina redondeada del CRT no lo tapa
+const GOAL_TOP = 6; // px: las bocas empiezan bajo la barra de tiempo
 const DELTA: Record<Direction, { col: number; row: number }> = {
   up: { col: 0, row: -1 },
   down: { col: 0, row: 1 },
   left: { col: -1, row: 0 },
   right: { col: 1, row: 0 },
-};
-const COLORS = {
-  goalsBg: "#3fa34d",
-  goal: "#0f3d1a",
-  goalBorder: "#f5c542",
-  river: "#0a1a4a",
-  safe: "#123d1c",
-  road: "#000000",
-  lane: "#3a3a3a",
-  cars: ["#ff3b3b", "#f5ff00", "#2f7bff"],
-  wheel: "#111111",
-  truck: "#9a9aa6",
-  truckCab: "#d0d0da",
-  log: "#7a4a1e",
-  logLine: "#5a3412",
-  turtle: "#1f9e4a",
-  turtleScale: "#0d5e28",
-  frog: "#39ff14",
-  frogDark: "#1a9e0a",
-  eyeWhite: "#ffffff",
-  eyeBlack: "#000000",
-  hud: "#ffffff",
-  timeOk: "#00ff88",
-  timeWarn: "#f5ff00",
-  timeLow: "#ff3b3b",
 };
 function roundTimeMs(level: number): number {
   return Math.max(ROUND_TIME_MIN, ROUND_TIME_BASE - (level - 1)) * 1000;
@@ -180,12 +160,18 @@ function checkGoal(frog: Frog, goals: boolean[]): number {
   goals[i] = true;
   return i;
 }
-export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCallbacks): GameEngine {
+export function createFroggerGame(
+  canvas: HTMLCanvasElement,
+  callbacks: GameCallbacks,
+  options?: GameOptions,
+): GameEngine {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) throw new Error("FROGGER: el canvas no tiene contexto 2D");
   const ctx: CanvasRenderingContext2D = ctx2d;
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
+  // Paleta del skin, resuelta una vez (ver lib/games/frogger/skins.ts).
+  const pal = PALETTES[options?.skin ?? DEFAULT_SKIN];
   // ── Estado de la partida ──
   let lanes: Lane[] = [];
   let frog: Frog = newFrog();
@@ -349,16 +335,26 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     }
   }
   // ── Dibujo (primitivas canvas, sin sprites) ──
+  /** Neón: activa el glow para el siguiente elemento. Sin efecto si `pal.glow` es 0. */
+  function glow(color: string) {
+    if (pal.glow <= 0) return;
+    ctx.shadowBlur = pal.glow;
+    ctx.shadowColor = color;
+  }
+  /** Quita el glow tras cada elemento: no se arrastra al resto del frame. */
+  function noGlow() {
+    if (pal.glow > 0) ctx.shadowBlur = 0;
+  }
   function drawBackground() {
     for (let row = 0; row < ROWS; row++) {
-      if (row === ROW_GOALS) ctx.fillStyle = COLORS.goalsBg;
-      else if (isRiverRow(row)) ctx.fillStyle = COLORS.river;
-      else if (row === ROW_SAFE_MID || row === ROW_START) ctx.fillStyle = COLORS.safe;
-      else ctx.fillStyle = COLORS.road;
+      if (row === ROW_GOALS) ctx.fillStyle = pal.goalsBg;
+      else if (isRiverRow(row)) ctx.fillStyle = pal.river;
+      else if (row === ROW_SAFE_MID || row === ROW_START) ctx.fillStyle = pal.safe;
+      else ctx.fillStyle = pal.road;
       ctx.fillRect(0, row * CELL, CANVAS_W, CELL);
     }
     // Marcas de carril discontinuas entre las filas de carretera.
-    ctx.strokeStyle = COLORS.lane;
+    ctx.strokeStyle = pal.lane;
     ctx.lineWidth = 2;
     ctx.setLineDash([12, 12]);
     ctx.beginPath();
@@ -377,113 +373,217 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     ctx.rotate(angle);
     // Patas: recogidas en reposo, extendidas durante el salto.
     const reach = jumping ? 16 : 11;
-    ctx.fillStyle = COLORS.frogDark;
+    ctx.fillStyle = pal.frogDark;
     for (const sx of [-1, 1]) {
       ctx.fillRect(sx * reach - 3, -reach + 2, 6, 6);
       ctx.fillRect(sx * reach - 3, reach - 8, 6, 6);
     }
-    ctx.fillStyle = COLORS.frog;
+    ctx.fillStyle = pal.frog;
+    glow(pal.frog);
     ctx.beginPath();
     ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
     ctx.fill();
+    noGlow();
     for (const sx of [-1, 1]) {
-      ctx.fillStyle = COLORS.eyeWhite;
+      ctx.fillStyle = pal.eyeWhite;
       ctx.beginPath();
       ctx.arc(sx * 6, -9, 4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = COLORS.eyeBlack;
+      ctx.fillStyle = pal.eyeBlack;
       ctx.beginPath();
       ctx.arc(sx * 6, -10, 2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
   }
+  /** Rectángulo de esquinas redondeadas (path nuevo; el que llama rellena o traza). */
+  function roundRect(x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  }
   function drawGoals() {
-    const top = HUD_BAND;
-    const h = CELL - HUD_BAND - TIME_BAR_H - 2;
+    // Bocas como nichos abiertos por arriba: laterales y fondo con borde.
+    const h = CELL - GOAL_TOP - 2;
     GOAL_COLS.forEach((col, i) => {
-      const x = col * CELL;
-      ctx.fillStyle = COLORS.goal;
-      ctx.fillRect(x + 2, top, 2 * CELL - 4, h);
-      ctx.strokeStyle = COLORS.goalBorder;
+      const x = col * CELL + 3;
+      const w = 2 * CELL - 6;
+      ctx.fillStyle = pal.goal;
+      ctx.fillRect(x, GOAL_TOP, w, h);
+      ctx.strokeStyle = pal.goalBorder;
       ctx.lineWidth = 2;
-      ctx.strokeRect(x + 2, top, 2 * CELL - 4, h);
-      if (goals[i]) drawFrogShape(x + CELL, top + h / 2, "down", false, 0.85);
+      glow(pal.goalBorder);
+      ctx.beginPath();
+      ctx.moveTo(x, GOAL_TOP);
+      ctx.lineTo(x, GOAL_TOP + h);
+      ctx.lineTo(x + w, GOAL_TOP + h);
+      ctx.lineTo(x + w, GOAL_TOP);
+      ctx.stroke();
+      noGlow();
+      if (goals[i]) drawFrogShape(x + w / 2, GOAL_TOP + h / 2 + 2, "down", false, 0.9);
     });
   }
-  function drawCar(x: number, y: number, w: number, color: string) {
-    ctx.fillStyle = COLORS.wheel;
-    for (const wx of [x + 8, x + w - 8]) {
-      ctx.beginPath();
-      ctx.arc(wx, y + 8, 5, 0, Math.PI * 2);
-      ctx.arc(wx, y + CELL - 8, 5, 0, Math.PI * 2);
-      ctx.fill();
+  /** Ruedas: bloques oscuros que asoman por arriba y por abajo de la carrocería. */
+  function drawWheels(x: number, y: number, w: number) {
+    ctx.fillStyle = pal.wheel;
+    for (const wx of [x + 6, x + w - 16]) {
+      ctx.fillRect(wx, y + 7, 10, 5);
+      ctx.fillRect(wx, y + CELL - 12, 10, 5);
     }
+  }
+  function drawCar(x: number, y: number, w: number, color: string, dir: 1 | -1) {
+    drawWheels(x, y, w);
+    // Carrocería.
     ctx.fillStyle = color;
-    ctx.fillRect(x + 3, y + 8, w - 6, CELL - 16);
+    glow(color);
+    roundRect(x + 3, y + 10, w - 6, CELL - 20, 6);
+    ctx.fill();
+    noGlow();
+    // Habitáculo con el parabrisas hacia el morro (el sentido de avance).
+    const front = dir === 1 ? x + w - 3 : x + 3;
+    const cabW = Math.min(18, w - 16);
+    const cabX = dir === 1 ? front - cabW - 7 : front + 7;
+    ctx.fillStyle = pal.carWindow;
+    roundRect(cabX, y + 13, cabW, CELL - 26, 3);
+    ctx.fill();
+    // Faros.
+    ctx.fillStyle = pal.headlight;
+    const hx = dir === 1 ? front - 3 : front;
+    ctx.fillRect(hx, y + 12, 3, 4);
+    ctx.fillRect(hx, y + CELL - 16, 3, 4);
   }
   function drawTruck(x: number, y: number, w: number, dir: 1 | -1) {
-    ctx.fillStyle = COLORS.truck;
-    ctx.fillRect(x + 2, y + 6, w - 4, CELL - 12);
-    // Cabina en el morro: el lado hacia el que avanza.
-    ctx.fillStyle = COLORS.truckCab;
-    const cabX = dir === 1 ? x + w - CELL + 4 : x + 2;
-    ctx.fillRect(cabX, y + 8, CELL - 6, CELL - 16);
-  }
-  function drawLog(x: number, y: number, w: number) {
-    ctx.fillStyle = COLORS.log;
-    ctx.fillRect(x + 1, y + 6, w - 2, CELL - 12);
-    ctx.strokeStyle = COLORS.logLine;
+    drawWheels(x, y, w);
+    const cabW = 26;
+    const gap = 3;
+    const trailerX = dir === 1 ? x + 3 : x + 3 + cabW + gap;
+    const trailerW = w - 6 - cabW - gap;
+    const cabX = dir === 1 ? x + w - 3 - cabW : x + 3;
+    // Remolque: caja con borde y listones.
+    ctx.fillStyle = pal.truck;
+    glow(pal.truckOutline);
+    roundRect(trailerX, y + 8, trailerW, CELL - 16, 3);
+    ctx.fill();
+    ctx.strokeStyle = pal.truckOutline;
     ctx.lineWidth = 2;
+    ctx.stroke();
+    noGlow();
+    ctx.strokeStyle = pal.truckOutline;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    for (const ly of [y + 14, y + 20, y + 26]) {
-      ctx.moveTo(x + 6, ly);
-      ctx.lineTo(x + w - 6, ly);
+    for (let lx = trailerX + 12; lx < trailerX + trailerW - 6; lx += 12) {
+      ctx.moveTo(lx + 0.5, y + 11);
+      ctx.lineTo(lx + 0.5, y + CELL - 11);
     }
     ctx.stroke();
+    ctx.globalAlpha = 1;
+    // Cabina con ventanilla delantera.
+    ctx.fillStyle = pal.truckCab;
+    glow(pal.truckOutline);
+    roundRect(cabX, y + 10, cabW, CELL - 20, 5);
+    ctx.fill();
+    noGlow();
+    ctx.fillStyle = pal.carWindow;
+    const winX = dir === 1 ? cabX + cabW - 11 : cabX + 4;
+    ctx.fillRect(winX, y + 13, 7, CELL - 26);
   }
-  function drawTurtles(x: number, y: number, w: number, submerged: boolean) {
+  function drawLog(x: number, y: number, w: number) {
+    // Tronco: cuerpo redondeado, vetas de corteza y un corte con anillos en cada punta.
+    ctx.fillStyle = pal.log;
+    glow(pal.log);
+    roundRect(x + 2, y + 7, w - 4, CELL - 14, 12);
+    ctx.fill();
+    noGlow();
+    ctx.strokeStyle = pal.logLine;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const [ly, inset] of [
+      [y + 15, 18],
+      [y + 21, 28],
+      [y + 27, 14],
+    ]) {
+      ctx.moveTo(x + inset, ly);
+      ctx.lineTo(x + w - inset, ly);
+    }
+    ctx.stroke();
+    for (const ex of [x + 10, x + w - 10]) {
+      ctx.fillStyle = pal.logEnd;
+      ctx.beginPath();
+      ctx.ellipse(ex, y + CELL / 2, 6, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = pal.logLine;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(ex, y + CELL / 2, 3, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  function drawTurtles(x: number, y: number, w: number, dir: 1 | -1, diveT: number) {
+    const submerged = diveT >= TURTLE_VISIBLE_MS;
+    // Aviso: en el último tramo visible parpadean, a medio hundir.
+    const warning = !submerged && diveT >= TURTLE_VISIBLE_MS - TURTLE_WARN_MS;
+    const sinking = warning && Math.floor(diveT / 150) % 2 === 0;
     for (let i = 0; i < w / CELL; i++) {
       const cx = x + i * CELL + CELL / 2;
       const cy = y + CELL / 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 15, 0, Math.PI * 2);
       if (submerged) {
         // Bajo el agua: sólo el contorno, semitransparente. No sirve de apoyo.
         ctx.globalAlpha = 0.35;
-        ctx.strokeStyle = COLORS.turtle;
+        ctx.strokeStyle = pal.turtleSub;
         ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 13, 11, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.globalAlpha = 1;
         continue;
       }
-      ctx.fillStyle = COLORS.turtle;
-      ctx.fill();
-      ctx.fillStyle = COLORS.turtleScale;
-      for (const [dx, dy] of [
-        [0, 0],
-        [-7, -6],
-        [7, -6],
-        [-7, 6],
-        [7, 6],
+      if (sinking) ctx.globalAlpha = 0.55;
+      // Aletas y cabeza, asomando del caparazón hacia el sentido de avance.
+      ctx.fillStyle = pal.turtleScale;
+      for (const [fx, fy] of [
+        [-9, -11],
+        [9, -11],
+        [-9, 11],
+        [9, 11],
       ]) {
         ctx.beginPath();
-        ctx.arc(cx + dx, cy + dy, 3.5, 0, Math.PI * 2);
+        ctx.ellipse(cx + fx, cy + fy, 5, 3, 0, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.beginPath();
+      ctx.arc(cx + dir * 15, cy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Caparazón con placas.
+      ctx.fillStyle = pal.turtle;
+      glow(pal.turtle);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 13, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      noGlow();
+      ctx.strokeStyle = pal.turtleScale;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 5, 4, 0, 0, Math.PI * 2);
+      for (const a of [0, 1, 2, 3, 4, 5]) {
+        const ang = (a * Math.PI) / 3;
+        ctx.moveTo(cx + Math.cos(ang) * 5, cy + Math.sin(ang) * 4);
+        ctx.lineTo(cx + Math.cos(ang) * 12, cy + Math.sin(ang) * 10);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
   }
   function drawLanes() {
     for (const lane of lanes) {
       const y = lane.row * CELL;
-      const carColor = COLORS.cars[lane.row % COLORS.cars.length];
+      const carColor = pal.cars[lane.row % pal.cars.length];
       for (const e of lane.entities) {
         const x = e.col * CELL;
         const w = e.width * CELL;
-        if (e.type === "car") drawCar(x, y, w, carColor);
+        if (e.type === "car") drawCar(x, y, w, carColor, lane.dir);
         else if (e.type === "truck") drawTruck(x, y, w, lane.dir);
         else if (e.type === "log") drawLog(x, y, w);
-        else drawTurtles(x, y, w, !!e.submerged);
+        else drawTurtles(x, y, w, lane.dir, e.diveT ?? 0);
       }
     }
   }
@@ -495,24 +595,46 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     drawFrogShape(col * CELL + CELL / 2, row * CELL + CELL / 2, facing, frog.animating);
   }
   function drawHud() {
+    // Barra de tiempo a lo ancho, pegada arriba.
+    const ratio = timeLeft / roundTimeMs(level);
+    const barColor = ratio > 0.5 ? pal.timeOk : ratio > 0.25 ? pal.timeWarn : pal.timeLow;
+    ctx.fillStyle = barColor;
+    glow(barColor);
+    ctx.fillRect(0, 0, CANVAS_W * ratio, TIME_BAR_H);
+    noGlow();
+    // Textos con fondo propio: se leen igual sobre una boca vacía u ocupada.
     ctx.font = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = COLORS.hud;
-    ctx.textAlign = "left";
-    ctx.fillText(String(score).padStart(6, "0"), 4, 0);
-    ctx.textAlign = "center";
-    ctx.fillText("NIVEL " + level, CANVAS_W / 2, 0);
-    // Vidas: un círculo verde por vida, alineados a la derecha.
-    ctx.fillStyle = COLORS.frog;
-    for (let i = 0; i < lives; i++) {
-      ctx.beginPath();
-      ctx.arc(CANVAS_W - 8 - i * 14, 6, 5, 0, Math.PI * 2);
+    ctx.textBaseline = "middle";
+    const ty = GOAL_TOP + 12;
+    const label = (text: string, x: number, align: CanvasTextAlign, color: string) => {
+      ctx.textAlign = align;
+      const tw = ctx.measureText(text).width;
+      const left = align === "left" ? x : align === "center" ? x - tw / 2 : x - tw;
+      ctx.fillStyle = pal.hudBg;
+      roundRect(left - 5, ty - 9, tw + 10, 18, 3);
+      ctx.fill();
+      ctx.fillStyle = color;
+      glow(color);
+      ctx.fillText(text, x, ty + 1);
+      noGlow();
+    };
+    label("SCORE " + String(score).padStart(6, "0"), HUD_PAD, "left", pal.hudScore);
+    label("LVL " + String(level).padStart(2, "0"), CANVAS_W / 2, "center", pal.hudLevel);
+    // Vidas: una rana pequeña (círculo) por vida, alineadas a la derecha.
+    const livesW = lives * 14;
+    if (lives > 0) {
+      ctx.fillStyle = pal.hudBg;
+      roundRect(CANVAS_W - HUD_PAD - livesW - 3, ty - 9, livesW + 6, 18, 3);
       ctx.fill();
     }
-    // Barra de tiempo en el borde inferior de la fila 0.
-    const ratio = timeLeft / roundTimeMs(level);
-    ctx.fillStyle = ratio > 0.5 ? COLORS.timeOk : ratio > 0.25 ? COLORS.timeWarn : COLORS.timeLow;
-    ctx.fillRect(0, CELL - TIME_BAR_H, CANVAS_W * ratio, TIME_BAR_H);
+    ctx.fillStyle = pal.frog;
+    glow(pal.frog);
+    for (let i = 0; i < lives; i++) {
+      ctx.beginPath();
+      ctx.arc(CANVAS_W - HUD_PAD - 7 - i * 14, ty, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    noGlow();
   }
   function draw() {
     drawBackground();

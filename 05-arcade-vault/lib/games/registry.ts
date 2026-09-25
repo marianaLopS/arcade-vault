@@ -82,6 +82,8 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     width: 640,
     height: 560,
     controls: "flechas o WASD para saltar una casilla",
+    skins: true,
+    touch: {},
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {

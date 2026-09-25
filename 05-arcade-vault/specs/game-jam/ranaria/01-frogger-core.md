@@ -15,14 +15,14 @@
 - Crear `components/games/FroggerGame.tsx` — componente React `"use client"` que encapsula el canvas principal (480 × 640 px). Acepta props: `paused`, `onScoreChange`, `onLivesChange`, `onLevelChange`, `onGameOver`.
 - Game loop construido desde cero en el componente: cuadrícula de 16 columnas × 14 filas de 40 × 40 px. El mapa vertical se divide en tres zonas fijas: zona segura inferior (fila 13 — base de inicio), zona de carretera (filas 12–8, 5 carriles de tráfico), zona de río (filas 7–2, 6 carriles fluviales) y zona de metas (fila 1, 5 bocas destino).
 - Entidades de carretera: coches y camiones de distintas longitudes (1–3 celdas), velocidades y direcciones por carril; se mueven horizontalmente en loop continuo; colisión con la rana es letal.
-- Entidades de río: troncos (longitud 2–4 celdas) y tortugas (grupos de 2–3) por carril; se mueven horizontalmente. La rana sólo sobrevive en el río si está encima de un tronco o tortugas visibles; si cae al agua, muere. Las tortugas pueden sumergirse periódicamente (fase visible → bajo el agua → visible); mientras están bajo el agua no sirven de apoyo.
+- Entidades de río: troncos (longitud 2–4 celdas) y tortugas (grupos de 2–3) por carril; se mueven horizontalmente. La rana sólo sobrevive en el río si está encima de un tronco o tortugas visibles; si cae al agua, muere. Las tortugas pueden sumergirse periódicamente (fase visible 5 s → bajo el agua 1.5 s → visible), y parpadean durante los últimos 0.9 s visibles como aviso; mientras están bajo el agua no sirven de apoyo.
 - Movimiento de la rana: basado en saltos discretos de 1 celda (40 px) en 4 direcciones (↑ ↓ ← →); cada pulsación desplaza la rana exactamente una celda tras completar una animación de salto de 120 ms. La rana no puede moverse fuera de los bordes laterales.
 - Condición de meta alcanzada: la rana llega a una de las 5 bocas destino de la fila superior (cada boca ocupa 2 columnas de las 16). Una boca ya ocupada no puede volver a usarse en la misma ronda. Al rellenar las 5 bocas se completa la ronda y comienza la siguiente.
 - Condición de muerte: (a) colisión con vehículo, (b) caída al agua, (c) sumergirse la tortuga bajo la rana, (d) salir por los bordes izquierdo/derecho del río, (e) agotar el temporizador de ronda (15 s iniciales reducidos en niveles altos).
 - Sistema de vidas: la rana arranca con 3 vidas. Cada muerte resta 1 vida y llama `onLivesChange(lives - 1)`. Si `lives - 1 === 0` se llama `onLivesChange(0)` y luego `onGameOver(finalScore)`.
 - Puntuación: +10 pts por cada celda avanzada hacia arriba por primera vez en la ronda; +50 pts al ocupar una boca destino; +200 pts al completar una ronda; +bonus de tiempo = `tiempo_restante × 10` al ocupar una boca.
 - Temporizador de ronda visible en HUD: 15 s por defecto, decrementado en rondas altas.
-- HUD interno del canvas (score top-left, vidas como iconos de rana top-right, nivel top-center, barra de tiempo en la fila 0) — patrón doble HUD igual que los demás juegos de la plataforma.
+- HUD interno del canvas (`SCORE 000000` top-left, vidas como iconos de rana top-right, `LVL 01` top-center, cada uno sobre su propia etiqueta oscura y apartado del borde; barra de tiempo en el borde superior de la fila 0) — patrón doble HUD igual que los demás juegos de la plataforma.
 - Prop `paused: boolean` congela `update()` pero sigue llamando a `draw()`.
 - Limpiar los event listeners (`keydown` en `document`) en el `return` del `useEffect`.
 - Crear `app/games/frogger/play/page.tsx` — play-page específica.
@@ -128,7 +128,7 @@ No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y
 
 3. **Construir el mapa de carriles** — función `buildLanes(level: number): Lane[]`:
    - Carriles de carretera (filas 8–12): velocidades entre 1.5 y 4 px/frame (escaladas por nivel); sentidos alternos; entidades precargadas con huecos para que sean atravesables.
-   - Carriles de río (filas 1–6): velocidades entre 1 y 3 px/frame; troncos de 2–4 celdas con huecos de al menos 1 celda; grupos de tortugas de 2–3 con ciclo de inmersión de 3 s visible / 1.5 s bajo el agua.
+   - Carriles de río (filas 1–6): velocidades entre 1 y 3 px/frame; troncos de 2–4 celdas con huecos de al menos 1 celda; grupos de tortugas de 2–3 con ciclo de inmersión de 5 s visible (con parpadeo de aviso en los últimos 0.9 s) / 1.5 s bajo el agua.
    - Cada nivel incrementa todas las velocidades en un 15 %.
      Verificación: al imprimir el array `lanes` en consola, cada carril tiene al menos 2 entidades y los huecos son visibles.
 
@@ -147,7 +147,8 @@ No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y
      - Dibujar entidades de cada carril: coches (rectángulo rojo/amarillo/azul con ruedas circulares), camiones (rectángulo gris con cabina diferenciada), troncos (rectángulo marrón con textura de líneas), tortugas visibles (círculo verde con patrón de escamas), tortugas sumergidas (contorno semitransparente).
      - Dibujar rana: cuerpo verde brillante (elipse 28×24 px) con ojos blancos/negros (dos círculos), patas extendidas durante animación de salto.
      - Dibujar bocas destino: rectángulo de meta verde oscuro con borde dorado; si ocupada, dibujar silueta de rana dentro.
-     - HUD interno: score top-left (fuente blanca 16 px), nivel top-center, iconos de rana top-right (un círculo verde por vida), barra de tiempo (rectángulo en fila 0, anchura proporcional al tiempo restante, color verde → amarillo → rojo).
+     - HUD interno: `SCORE 000000` top-left, `LVL 01` top-center, iconos de rana top-right (un círculo verde por vida), cada uno sobre una etiqueta oscura con margen lateral de 14 px para que la esquina del CRT no lo tape; barra de tiempo (3 px en el borde superior de la fila 0, anchura proporcional al tiempo restante, color verde → amarillo → rojo). Las bocas se dibujan como nichos abiertos por arriba.
+     - Objetos con más detalle, siempre con primitivas: coches con habitáculo, faros y ruedas; camiones con cabina y remolque con listones; troncos redondeados con vetas y cortes con anillos en las puntas; tortugas con caparazón de placas, aletas y cabeza hacia el sentido de avance.
 
 5. **Detección de colisiones y soporte**:
    - `checkRoadCollision(frog, lanes)`: itera entidades de carriles de carretera; si `frog.col` está dentro del rango `[entity.col, entity.col + entity.width)` y `frog.row === lane.row`, devuelve `true`.
@@ -192,7 +193,7 @@ No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y
 - [ ] La rana no puede salir por los bordes laterales.
 - [ ] Los coches y camiones se mueven horizontalmente en loop por sus carriles; se reintroducen por el lado opuesto al salir.
 - [ ] Los troncos y tortugas se mueven horizontalmente en loop por sus carriles.
-- [ ] Las tortugas alternan entre visible y sumergida con el ciclo definido.
+- [ ] Las tortugas alternan entre visible y sumergida con el ciclo definido (5 s / 1.5 s) y parpadean antes de sumergirse.
 - [ ] La rana muere al ser alcanzada por un vehículo de carretera.
 - [ ] La rana muere al caer al agua (no estar sobre tronco ni tortugas visibles).
 - [ ] La rana muere cuando la tortuga que la soporta se sumerge.
@@ -230,7 +231,7 @@ No se introducen nuevas tablas ni tipos TypeScript — se reutilizan `GameRow` y
 
 - **Sí: 3 vidas** — Frogger original arranca con 3 vidas. `onLivesChange` notifica cada pérdida. Razón: fiel a la mecánica clásica; coherente con Arkanoid y Space Invaders.
 
-- **Sí: Tortugas con ciclo de inmersión** — alternan entre soporte y peligro con temporizador independiente por grupo. Razón: mecánica diferenciadora de Frogger respecto a un río de sólo troncos; añade gestión de riesgo sin complejidad de implementación excesiva.
+- **Sí: Tortugas con ciclo de inmersión** — alternan entre soporte y peligro con temporizador independiente por grupo. Razón: mecánica diferenciadora de Frogger respecto a un río de sólo troncos; añade gestión de riesgo sin complejidad de implementación excesiva. Ajustado durante la implementación a 5 s visibles (antes 3 s) con parpadeo de aviso: con 3 s se hundían demasiado rápido.
 
 - **Sí: Temporizador de ronda** — 15 s iniciales, decrementados en niveles altos. La muerte por tiempo añade urgencia. Razón: mecánica original de Frogger; impide que el jugador espere indefinidamente en la zona segura.
 
