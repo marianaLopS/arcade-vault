@@ -1,6 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { guardarScore } from "@/app/jugar/actions";
 import { FpsMeter } from "@/components/fps-meter";
 import { GameCanvas, type GameCanvasHandle } from "@/components/game-canvas";
@@ -14,6 +22,16 @@ import { limpiarIniciales, normalizarIniciales } from "@/lib/iniciales";
 import { useSession } from "@/lib/session";
 /** Puntos que cuesta subir de nivel en la simulación. */
 const PUNTOS_POR_NIVEL = 2500;
+/** Pausar re-renderiza GamePlayer; la tabla no cambia, así que no se repinta. */
+const MemoLeaderboard = memo(Leaderboard);
+// Formato de los tres valores del HUD que cambian durante la partida. No son
+// estado de React: los escribe `pintar` directamente en el DOM (SPEC 13).
+const fmtScore = (v: number) => v.toLocaleString("es-ES");
+const fmtVidas = (v: number) => "♥ ".repeat(v).trim() || "—";
+const fmtNivel = (v: number) => String(v).padStart(2, "0");
+function pintar(el: HTMLElement | null, text: string) {
+  if (el && el.textContent !== text) el.textContent = text;
+}
 export function GamePlayer({
   game,
   hasLeaderboard,
@@ -34,13 +52,44 @@ export function GamePlayer({
   useEffect(() => {
     renders.current++;
   });
-  const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [engineLevel, setEngineLevel] = useState(1);
+  // Puntos, vidas y nivel cambian durante la partida: viven en refs y se
+  // escriben en el DOM, así el motor no re-renderiza la página al avisar.
+  const scoreRef = useRef(0);
+  const livesRef = useRef(3);
+  const levelRef = useRef(1);
+  const scoreEl = useRef<HTMLDivElement>(null);
+  const livesEl = useRef<HTMLDivElement>(null);
+  const levelEl = useRef<HTMLDivElement>(null);
+  const pintarNivel = useCallback((v: number) => {
+    levelRef.current = v;
+    pintar(levelEl.current, fmtNivel(v));
+  }, []);
+  const pintarVidas = useCallback((v: number) => {
+    livesRef.current = v;
+    pintar(livesEl.current, fmtVidas(v));
+  }, []);
+  const pintarScore = useCallback(
+    (v: number) => {
+      scoreRef.current = v;
+      pintar(scoreEl.current, fmtScore(v));
+      // Sin motor, el nivel de la simulación se deriva de los puntos.
+      if (!entry) pintarNivel(1 + Math.floor(v / PUNTOS_POR_NIVEL));
+    },
+    [entry, pintarNivel],
+  );
+  // Los `.v` de arriba no tienen hijos de React: tras cada render (y en el
+  // primero, tras hidratar) se reescriben desde las refs.
+  useLayoutEffect(() => {
+    pintar(scoreEl.current, fmtScore(scoreRef.current));
+    pintar(livesEl.current, fmtVidas(livesRef.current));
+    pintar(levelEl.current, fmtNivel(levelRef.current));
+  });
   const [paused, setPaused] = useState(false);
-  const [over, setOver] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  /** Puntuación final mientras se enseña el modal; `null` = partida en curso. */
+  const [over, setOver] = useState<number | null>(null);
+  const [guardado, setGuardado] = useState<{ ok: true } | { error: string } | null>(null);
+  const saved = guardado !== null && "ok" in guardado;
+  const errorGuardado = guardado !== null && "error" in guardado ? guardado.error : null;
   const [guardando, startGuardado] = useTransition();
   /** Iniciales escritas en el modal; si es null manda el nombre de la sesión. */
   const [customName, setCustomName] = useState<string | null>(null);
@@ -48,12 +97,12 @@ export function GamePlayer({
   // un contador que finge una partida para poder ver los estados de la maqueta
   // (en marcha, en pausa, fin de partida).
   useEffect(() => {
-    if (entry || over || paused) return;
+    if (entry || over !== null || paused) return;
     const t = setInterval(() => {
-      setScore((s) => s + Math.floor(10 + Math.random() * 90));
+      pintarScore(scoreRef.current + Math.floor(10 + Math.random() * 90));
     }, 220);
     return () => clearInterval(t);
-  }, [entry, over, paused]);
+  }, [entry, over, paused, pintarScore]);
   // La pantalla ocupa el alto de la ventana menos la barra de navegación, cuyo
   // alto cambia con el ancho (los enlaces se parten). Se mide en vivo y se
   // publica como --av-nav-h para que el CSS no dependa de un número fijo.
@@ -70,29 +119,42 @@ export function GamePlayer({
       root.style.removeProperty("--av-nav-h");
     };
   }, []);
-  const level = entry ? engineLevel : 1 + Math.floor(score / PUNTOS_POR_NIVEL);
   const name = customName ?? user?.name ?? "INVITADO";
   // Lo que se va a guardar de verdad: la columna `player` acepta tres letras.
   const iniciales = normalizarIniciales(name);
   const guardar = () => {
-    if (guardando || saved) return;
-    setErrorGuardado(null);
+    if (guardando || saved || over === null) return;
+    setGuardado(null);
     startGuardado(async () => {
-      const res = await guardarScore({ game: game.id, score, name: iniciales });
-      if (res.ok) setSaved(true);
-      else setErrorGuardado(res.error);
+      const res = await guardarScore({ game: game.id, score: over, name: iniciales });
+      setGuardado(res.ok ? { ok: true } : { error: res.error });
     });
   };
   // Nueva partida desde el modal: el motor se reinicia y vuelve a avisar de
   // score, vidas y nivel; aquí sólo se limpia el estado del fin de partida.
   const jugarDeNuevo = () => {
-    setOver(false);
-    setSaved(false);
-    setErrorGuardado(null);
+    setOver(null);
+    setGuardado(null);
     setPaused(false);
-    setScore(0);
+    // Antes del restart: el motor vuelve a avisar enseguida con sus valores.
+    pintarScore(0);
+    pintarVidas(3);
+    pintarNivel(1);
     canvasRef.current?.restart();
   };
+  // Callbacks estables hacia GameCanvas y TouchPad.
+  const onGameOver = useCallback(
+    (finalScore: number) => {
+      pintarScore(finalScore);
+      setOver(finalScore);
+    },
+    [pintarScore],
+  );
+  const togglePause = useCallback(() => setPaused((p) => !p), []);
+  const onPadKey = useCallback(
+    (code: string, down: boolean) => canvasRef.current?.key(code, down),
+    [],
+  );
   // El selector de skin vive en el HUD y, en táctil, dentro de la pausa: el
   // CSS enseña uno u otro. Cada copia necesita su propio `id` para el label.
   const skinPicker = (id: string) =>
@@ -106,7 +168,7 @@ export function GamePlayer({
           <select
             id={id}
             value={skin}
-            disabled={over}
+            disabled={over !== null}
             onChange={(e) => {
               if (isSkinId(e.target.value)) setSkin(e.target.value);
             }}
@@ -142,15 +204,15 @@ export function GamePlayer({
           </div>
           <div className="hud-stat">
             <div className="l">Puntuación</div>
-            <div className="v">{score.toLocaleString("es-ES")}</div>
+            <div className="v" ref={scoreEl} />
           </div>
           <div className="hud-stat lives">
             <div className="l">Vidas</div>
-            <div className="v">{"♥ ".repeat(lives).trim() || "—"}</div>
+            <div className="v" ref={livesEl} />
           </div>
           <div className="hud-stat level">
             <div className="l">Nivel</div>
-            <div className="v">{String(level).padStart(2, "0")}</div>
+            <div className="v" ref={levelEl} />
           </div>
           {/* Cambiar de skin recrea el motor: la partida vuelve a empezar. */}
           {skinPicker("av-skin")}
@@ -161,7 +223,7 @@ export function GamePlayer({
           </button>
           {/* Con motor real el fin de partida lo decide el juego, no un botón. */}
           {!entry && (
-            <button className="btn magenta" onClick={() => setOver(true)}>
+            <button className="btn magenta" onClick={() => setOver(scoreRef.current)}>
               FIN
             </button>
           )}
@@ -179,16 +241,13 @@ export function GamePlayer({
               <GameCanvas
                 ref={canvasRef}
                 entry={entry}
-                paused={paused || over}
+                paused={paused || over !== null}
                 skin={entry.skins ? skin : DEFAULT_SKIN}
-                onScore={setScore}
-                onLives={setLives}
-                onLevel={setEngineLevel}
-                onGameOver={(finalScore) => {
-                  setScore(finalScore);
-                  setOver(true);
-                }}
-                onTogglePause={() => setPaused((p) => !p)}
+                onScore={pintarScore}
+                onLives={pintarVidas}
+                onLevel={pintarNivel}
+                onGameOver={onGameOver}
+                onTogglePause={togglePause}
               />
             ) : (
               <div className="game-arena">
@@ -238,19 +297,15 @@ export function GamePlayer({
         </div>
       </div>
       {entry?.touch && (
-        <TouchPad
-          controls={entry.touch}
-          disabled={paused || over}
-          onKey={(code, down) => canvasRef.current?.key(code, down)}
-        />
+        <TouchPad controls={entry.touch} disabled={paused || over !== null} onKey={onPadKey} />
       )}
-      {entry && <Leaderboard scores={scores} className="player-board" />}
-      {over && (
+      {entry && <MemoLeaderboard scores={scores} className="player-board" />}
+      {over !== null && (
         <div className="modal-bd">
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="av-fin-titulo">
             <h2 id="av-fin-titulo">FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
-            <div className="final">{score.toLocaleString("es-ES")}</div>
+            <div className="final">{fmtScore(over)}</div>
             {hasLeaderboard &&
               (!saved ? (
                 <>
