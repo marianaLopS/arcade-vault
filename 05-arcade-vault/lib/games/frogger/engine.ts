@@ -98,6 +98,8 @@ const DT_MAX = 50;
 const ROUND_TIME_BASE = 15; // s a nivel 1
 const ROUND_TIME_MIN = 8; // s: −1 s por nivel hasta aquí
 const POINTS_PER_ROW = 10;
+const POINTS_PER_GOAL = 50;
+const POINTS_PER_SECOND_LEFT = 10;
 /** Bocas destino de la fila 0: 2 columnas cada una, separadas por 1 de muro. */
 const GOAL_COLS = [1, 4, 7, 10, 13];
 const HUD_BAND = 12; // px superiores de la fila 0 para el texto del HUD
@@ -138,6 +140,44 @@ function roundTimeMs(level: number): number {
 }
 function isRiverRow(row: number): boolean {
   return row >= ROW_RIVER_TOP && row <= ROW_RIVER_BOT;
+}
+/** Centro horizontal de la rana, en celdas: el punto que se compara con las entidades. */
+function frogCenter(frog: Frog): number {
+  return frog.col + 0.5;
+}
+function covers(e: Entity, x: number): boolean {
+  return x >= e.col && x < e.col + e.width;
+}
+function checkRoadCollision(frog: Frog, lanes: Lane[]): boolean {
+  const x = frogCenter(frog);
+  return lanes.some(
+    (lane) =>
+      lane.row === frog.row &&
+      lane.row >= ROW_ROAD_TOP &&
+      lane.row <= ROW_ROAD_BOT &&
+      lane.entities.some((e) => covers(e, x)),
+  );
+}
+/** Entidad de río que sostiene a la rana, o null (agua, o tortuga sumergida). */
+function getSupport(frog: Frog, lanes: Lane[]): { lane: Lane; entity: Entity } | null {
+  const lane = lanes.find((l) => l.row === frog.row);
+  if (!lane || !isRiverRow(lane.row)) return null;
+  const x = frogCenter(frog);
+  const entity = lane.entities.find((e) => covers(e, x));
+  if (!entity || entity.submerged) return null;
+  return { lane, entity };
+}
+/**
+ * Rana en la fila de metas: marca la boca libre que le corresponde y devuelve
+ * su índice; -1 si cayó en un muro o en una boca ya ocupada (muerte).
+ */
+function checkGoal(frog: Frog, goals: boolean[]): number {
+  if (frog.row !== ROW_GOALS) return -1;
+  const col = Math.round(frog.col);
+  const i = GOAL_COLS.findIndex((g) => col >= g && col < g + 2);
+  if (i === -1 || goals[i]) return -1;
+  goals[i] = true;
+  return i;
 }
 export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCallbacks): GameEngine {
   const ctx2d = canvas.getContext("2d");
@@ -214,12 +254,21 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     frog.targetCol = targetCol;
     frog.targetRow = targetRow;
   }
+  /** Muerte de la rana. Provisional hasta killFrog (paso 7): sin restar vida. */
+  function die() {
+    resetFrog();
+  }
   /** Lógica de la celda en la que acaba de aterrizar la rana. */
   function resolveLanding() {
     if (!isRiverRow(frog.row)) frog.col = Math.round(frog.col);
     if (frog.row < bestRow) {
       score += POINTS_PER_ROW * (bestRow - frog.row);
       bestRow = frog.row;
+    }
+    if (frog.row === ROW_GOALS) {
+      if (checkGoal(frog, goals) === -1) return die();
+      score += POINTS_PER_GOAL + Math.floor(timeLeft / 1000) * POINTS_PER_SECOND_LEFT;
+      resetFrog();
     }
   }
   function updateFrog(dt: number) {
@@ -236,18 +285,26 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     frog.animT = 0;
     resolveLanding();
   }
-  function carryFrog(dt: number) {
-    if (frog.animating || !isRiverRow(frog.row)) return;
-    const lane = lanes.find((l) => l.row === frog.row);
-    if (!lane) return;
-    // Aún sin getSupport (paso 5): la rana viaja con la corriente de su carril.
-    frog.col += (lane.speed * lane.dir * dt) / 16 / CELL;
+  /**
+   * Peligros de la celda actual, cada frame y sólo en reposo: los coches se
+   * mueven hacia la rana y el apoyo del río puede sumergirse o irse.
+   */
+  function checkHazards(dt: number) {
+    if (frog.animating) return;
+    if (checkRoadCollision(frog, lanes)) return die();
+    if (!isRiverRow(frog.row)) return;
+    const support = getSupport(frog, lanes);
+    if (!support) return die();
+    // La rana viaja con el tronco o las tortugas que la sostienen.
+    frog.col += (support.lane.speed * support.lane.dir * dt) / 16 / CELL;
+    const x = frogCenter(frog);
+    if (x < 0 || x >= COLS) die();
   }
   function update(dt: number) {
     if (state !== "playing") return;
     moveEntities(dt);
     updateFrog(dt);
-    carryFrog(dt);
+    checkHazards(dt);
     timeLeft = Math.max(0, timeLeft - dt);
   }
   // ── Avisos al HUD: sólo cuando el valor cambia ──
