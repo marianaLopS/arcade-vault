@@ -265,8 +265,17 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
     // Después de subir el nivel: el reloj de la rana nueva ya es el del nivel siguiente.
     resetFrog();
   }
-  /** Muerte de la rana. Provisional hasta killFrog (paso 7): sin restar vida. */
-  function die() {
+  /**
+   * Muerte de la rana. Con vidas, rana nueva en la salida y reloj lleno; sin
+   * ellas, fin de partida: loop() emite onLives(0) y después onGameOver(score).
+   */
+  function killFrog() {
+    lives--;
+    if (lives <= 0) {
+      lives = 0;
+      state = "gameover";
+      return;
+    }
     resetFrog();
   }
   /** Lógica de la celda en la que acaba de aterrizar la rana. */
@@ -277,7 +286,7 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
       bestRow = frog.row;
     }
     if (frog.row === ROW_GOALS) {
-      if (checkGoal(frog, goals) === -1) return die();
+      if (checkGoal(frog, goals) === -1) return killFrog();
       score += POINTS_PER_GOAL + Math.floor(timeLeft / 1000) * POINTS_PER_SECOND_LEFT;
       if (goals.every(Boolean)) completeRound();
       else resetFrog();
@@ -303,21 +312,23 @@ export function createFroggerGame(canvas: HTMLCanvasElement, callbacks: GameCall
    */
   function checkHazards(dt: number) {
     if (frog.animating) return;
-    if (checkRoadCollision(frog, lanes)) return die();
+    if (checkRoadCollision(frog, lanes)) return killFrog();
     if (!isRiverRow(frog.row)) return;
     const support = getSupport(frog, lanes);
-    if (!support) return die();
+    if (!support) return killFrog();
     // La rana viaja con el tronco o las tortugas que la sostienen.
     frog.col += (support.lane.speed * support.lane.dir * dt) / 16 / CELL;
     const x = frogCenter(frog);
-    if (x < 0 || x >= COLS) die();
+    if (x < 0 || x >= COLS) killFrog();
   }
   function update(dt: number) {
     if (state !== "playing") return;
     moveEntities(dt);
     updateFrog(dt);
     checkHazards(dt);
+    if (state !== "playing") return;
     timeLeft = Math.max(0, timeLeft - dt);
+    if (timeLeft === 0) killFrog();
   }
   // ── Avisos al HUD: sólo cuando el valor cambia ──
   let lastScore = -1;
