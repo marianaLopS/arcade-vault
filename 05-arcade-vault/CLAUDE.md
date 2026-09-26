@@ -62,6 +62,14 @@ el campo `touch` de `GameEngineEntry` (`{ a?, b?: { code, label }, repeat? }`): 
 mapeo no se pinta, y un juego sin `touch` no tiene mando. En táctil el HUD se reduce a una barra
 y el skin y `SALIR` pasan al overlay de pausa. Ningún motor debe comprobar `e.isTrusted`.
 
+Rendimiento (SPEC 13): en `GamePlayer` puntos, vidas y nivel **no son estado de React** — viven en
+refs y `pintarScore`/`pintarVidas`/`pintarNivel` escriben el `textContent` de los `.v` del HUD, así
+que los avisos del motor no re-renderizan la página. Mantener `useState` sólo para lo que cambia lo
+que React pinta (`paused`, `over` = puntuación final o `null`, `guardado`, `customName`). Los motores
+no deben asignar arrays/objetos/clausuras dentro de `draw()`. Medidor de desarrollo: añadir
+`?fps=1` a `/jugar/<id>` (`components/fps-meter.tsx`) muestra fps, p95, frames > 50 ms, renders de
+`GamePlayer` y heap, y lo publica en `window.__avFps` para Playwright.
+
 Para agregar un juego nuevo sigue el flujo de la skill `nuevo-juego` (ver sección "skills"),
 no un proceso ad-hoc.
 
@@ -123,6 +131,12 @@ agregue un juego.
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README) siguen siendo el flujo
 general de Spec Driven Design. Ya hay 10 specs en `specs/01-...` a `specs/10-juego-snake.md`;
 seguir el mismo patrón de numeración al agregar una nueva.
+
+`/spec-impl-game` (skill propia en `.agents/skills/spec-impl-game/`, symlink en
+`.claude/skills/`): para specs de **juegos**. Sigue las Fases 1–4 de `/spec-impl` leyendo su
+`SKILL.md` (no la duplica ni la modifica; también busca en `specs/game-jam/<id>/`), luego
+`lint` + `build` y lanza en secuencia, nunca en paralelo, `skin-designer` y después
+`mobile-porter` sobre el slug implementado. No hace commits.
 
 ## Agentes
 
