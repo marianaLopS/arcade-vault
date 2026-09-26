@@ -518,10 +518,10 @@ export const createAsteroidsGame: GameFactory = (
     if (novaTimer > 0) novaTimer -= dt; // la onda se apaga en cualquier estado
     if (state === "dead") {
       deadTimer -= dt;
-      particles.forEach((p) => p.update(dt));
+      for (const p of particles) p.update(dt);
       particles = particles.filter((p) => !p.dead);
-      asteroids.forEach((a) => a.update(dt));
-      powerUps.forEach((p) => p.update(dt));
+      for (const a of asteroids) a.update(dt);
+      for (const p of powerUps) p.update(dt);
       powerUps = powerUps.filter((p) => !p.dead);
       if (deadTimer <= 0) {
         state = "playing";
@@ -548,12 +548,12 @@ export const createAsteroidsGame: GameFactory = (
     if (hiperActivo) hiperReserva = Math.max(0, hiperReserva - dt);
     else hiperReserva = Math.min(HIPER_RESERVA, hiperReserva + HIPER_RECARGA * dt);
     ship.update(dt, keys, hiperActivo);
-    bullets.forEach((b) => b.update(dt));
+    for (const b of bullets) b.update(dt);
     // Cámara lenta: sólo los asteroides avanzan con dt escalado
     const dtAst = slowTimer > 0 ? dt * SLOW_FACTOR : dt;
-    asteroids.forEach((a) => a.update(dtAst));
-    particles.forEach((p) => p.update(dt));
-    powerUps.forEach((p) => p.update(dt));
+    for (const a of asteroids) a.update(dtAst);
+    for (const p of particles) p.update(dt);
+    for (const p of powerUps) p.update(dt);
     bullets = bullets.filter((b) => !b.dead);
     particles = particles.filter((p) => !p.dead);
     powerUps = powerUps.filter((p) => !p.dead);
@@ -694,10 +694,10 @@ export const createAsteroidsGame: GameFactory = (
   function draw() {
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
-    particles.forEach((p) => p.draw(ctx, pal));
-    asteroids.forEach((a) => a.draw(ctx, pal));
-    powerUps.forEach((p) => p.draw(ctx, pal));
-    bullets.forEach((b) => b.draw(ctx, pal));
+    for (const p of particles) p.draw(ctx, pal);
+    for (const a of asteroids) a.draw(ctx, pal);
+    for (const p of powerUps) p.draw(ctx, pal);
+    for (const b of bullets) b.draw(ctx, pal);
     ship.draw(ctx, pal, hiperActivo);
     drawEscudo();
     drawNova();

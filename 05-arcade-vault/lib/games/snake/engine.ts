@@ -23,6 +23,8 @@ const POINTS_PER_FRUIT = 10;
 const MAX_TURNS = 2;
 const DT_MAX = 50;
 const FRUIT_SRC = "/juegos/snake/fruits.png";
+// Único texto que dibuja el canvas: font/align/baseline se fijan una vez (C3).
+const HINT_FONT = "20px ui-monospace, SFMono-Regular, Menlo, monospace";
 type Cell = { x: number; y: number }; // coordenadas de grilla, origen arriba-izquierda
 type Dir = "up" | "down" | "left" | "right";
 const DELTA: Record<Dir, Cell> = {
@@ -49,6 +51,10 @@ export function createSnakeGame(
   const ctx: CanvasRenderingContext2D = ctx2d;
   canvas.width = W;
   canvas.height = H;
+  // Estado de texto fijo: el único que dibuja el canvas (drawHint), no cambia entre frames.
+  ctx.font = HINT_FONT;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   // ── Estado de la partida ──
   let snake: Cell[] = [];
   let dir: Dir = START_DIR;
@@ -235,9 +241,6 @@ export function createSnakeGame(
     if (pal.glow > 0) ctx.shadowBlur = 0;
   }
   function drawHint() {
-    ctx.font = "20px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
     if (pal.glow > 0) {
       ctx.shadowBlur = pal.glow;
       ctx.shadowColor = pal.hint;

@@ -63,6 +63,8 @@ const LAUNCH_VX_RATIO = 0.5;
 const EXPLOSION_TIME = EXPLOSION_DURATION / 1000; // 0.15 s de animación
 const SOUND_POOL = 4; // instancias por sonido: solo se cortan con >4 solapadas
 const SOUND_VOLUME = 0.5; // fijo en código, sin control de usuario
+// Rótulo "SIN SONIDO": fuente fija, se asigna una vez al crear el motor (C3).
+const MUTED_FONT = "20px monospace";
 // ── Niveles ───────────────────────────────────────────────────────────────────
 // Un array de strings por nivel. Máximo 6 filas, todas de la misma longitud.
 const LEVELS: string[][] = [
@@ -343,6 +345,11 @@ export const createArkanoidGame: GameFactory = (
   const ctx: CanvasRenderingContext2D = ctx2d;
   canvas.width = W;
   canvas.height = H;
+  // Estado de texto fijo del rótulo "SIN SONIDO": se asigna una vez (C3). Es el
+  // único texto del motor, así que draw() nunca necesita reasignarlo.
+  ctx.font = MUTED_FONT;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   // Skin: se resuelve una vez. Cambiarlo recrea el motor (components/game-canvas.tsx).
   const palette = PALETTES[options?.skin ?? DEFAULT_SKIN];
   // Estado de la partida — en la clausura, nunca en el módulo.
@@ -480,7 +487,7 @@ export const createArkanoidGame: GameFactory = (
         return;
       }
     }
-    explosions.forEach((e) => e.update(dt));
+    for (const e of explosions) e.update(dt);
     // Ninguna entidad se autoelimina: el loop filtra las marcadas dead
     blocks = blocks.filter((b) => !b.dead);
     explosions = explosions.filter((e) => !e.dead);
@@ -492,29 +499,43 @@ export const createArkanoidGame: GameFactory = (
     }
   }
   // Glow del skin neón alrededor de un elemento; se resetea siempre después
-  // para no arrastrarlo al resto del frame. Sin glow (clásico, retro), pinta tal cual.
-  function glow(color: string, paint: () => void) {
+  // para no arrastrarlo al resto del frame. Sin glow (clásico, retro), no hace nada.
+  // Partido en begin/end (en vez de recibir una clausura `paint`) para que
+  // draw() no cree una función nueva por elemento y por frame (C2).
+  function beginGlow(color: string) {
     if (palette.glow > 0) {
       ctx.shadowColor = color;
       ctx.shadowBlur = palette.glow;
     }
-    paint();
+  }
+  function endGlow() {
     if (palette.glow > 0) ctx.shadowBlur = 0;
   }
   function draw() {
     ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, W, H);
-    blocks.forEach((b) => glow(palette.blocks[b.color], () => b.draw(ctx, sheet)));
-    glow(palette.paddle, () => paddle.draw(ctx, sheet));
-    glow(palette.ball, () => ball.draw(ctx, sheet));
+    for (const b of blocks) {
+      beginGlow(palette.blocks[b.color]);
+      b.draw(ctx, sheet);
+      endGlow();
+    }
+    beginGlow(palette.paddle);
+    paddle.draw(ctx, sheet);
+    endGlow();
+    beginGlow(palette.ball);
+    ball.draw(ctx, sheet);
+    endGlow();
     // Encima de pala y bola: el efecto se ve entero aunque la bola pase por ahí
-    explosions.forEach((e) => glow(palette.blocks[e.color], () => e.draw(ctx, sheet)));
+    for (const e of explosions) {
+      beginGlow(palette.blocks[e.color]);
+      e.draw(ctx, sheet);
+      endGlow();
+    }
     if (muted) {
       ctx.fillStyle = palette.text;
-      ctx.font = "20px monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      glow(palette.text, () => ctx.fillText("SIN SONIDO", W / 2 + 60, 30));
+      beginGlow(palette.text);
+      ctx.fillText("SIN SONIDO", W / 2 + 60, 30);
+      endGlow();
     }
   }
   // ── Bucle principal ────────────────────────────────────────────────────────

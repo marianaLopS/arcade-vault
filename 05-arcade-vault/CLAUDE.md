@@ -161,6 +161,13 @@ SPEC 11 en **un** juego con motor — declara `touch` en `lib/games/registry.ts`
 toca `engine.ts`, el contrato ni Supabase; los juegos en maqueta van antes por `nuevo-juego`.
 Su memoria es `References/resources/resources/mobile-status.md`.
 
+`game-performance-booster` (`.claude/agents/game-performance-booster.md`): recibe el ID de **un**
+juego con motor y revisa/corrige su rendimiento con la checklist C1–C8 derivada de SPEC 13
+(`emit()` sólo en cambio, cero asignaciones en `draw()`, `ctx.font`/`measureText` cacheados, no
+dibujar en pausa, `destroy()` sin fugas…), midiendo antes/después con `?fps=1`. Nunca cambia
+mecánica, look de skins, contrato, registry, otros motores ni Supabase; la arquitectura de
+dibujo queda como pendiente. Su memoria es `References/resources/resources/performance-status.md`.
+
 ## Stack y convenciones
 
 - **Next.js 16 (App Router)** + React 19. Ver `AGENTS.md`: esta versión tiene breaking

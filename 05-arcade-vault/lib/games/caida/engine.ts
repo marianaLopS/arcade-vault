@@ -46,7 +46,13 @@ const POWERUPS: PowerUp[] = [
     name: "Bomba",
     desc: "Destruye un área de 3×3 alrededor del bloque",
   },
-  { id: "ray", icon: "⚡", color: "#fff176", name: "Rayo", desc: "Limpia la fila y la columna completas" },
+  {
+    id: "ray",
+    icon: "⚡",
+    color: "#fff176",
+    name: "Rayo",
+    desc: "Limpia la fila y la columna completas",
+  },
   {
     id: "tint",
     icon: "🎨",
@@ -61,7 +67,13 @@ const POWERUPS: PowerUp[] = [
     name: "Gravedad",
     desc: "Compacta los huecos del tablero hacia abajo",
   },
-  { id: "freeze", icon: "❄", color: "#64b5f6", name: "Congelar", desc: "Pausa la caída durante 5 segundos" },
+  {
+    id: "freeze",
+    icon: "❄",
+    color: "#64b5f6",
+    name: "Congelar",
+    desc: "Pausa la caída durante 5 segundos",
+  },
 ];
 const POWER_EVERY = 5; // líneas entre power-ups
 const FREEZE_MS = 5000; // duración de "Congelar"
@@ -141,6 +153,15 @@ const HOLLOW_BONUS = 300; // bonus (× nivel) al colocar la 3×3 hueca
 const LINE_SCORES = [0, 100, 300, 500, 800];
 /** Sin tema claro: la rejilla es siempre la oscura del original. */
 const GRID_COLOR = "#22222e";
+// Fuentes fijas del panel/toast: constantes de módulo (patrón HUD_FONT de FROGGER) en vez de
+// reasignar el mismo literal en cada frame o, en el caso de drawPowerBlock, reconstruir el
+// template string en cada llamada (size siempre es BLOCK).
+const PANEL_LABEL_FONT = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+const PANEL_LINES_FONT = "22px ui-monospace, SFMono-Regular, Menlo, monospace";
+const PANEL_TITLE_FONT = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+const TOAST_ICON_FONT = "20px system-ui, sans-serif";
+const TOAST_NAME_FONT = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
+const POWER_BLOCK_FONT = `${Math.floor(BLOCK * 0.6)}px system-ui, sans-serif`;
 type Board = number[][];
 type Piece = {
   type: number;
@@ -186,7 +207,8 @@ function rotateCW(shape: number[][]): number[][] {
   const rows = shape.length,
     cols = shape[0].length;
   const result = Array.from({ length: cols }, () => new Array<number>(rows).fill(0));
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) result[c][rows - 1 - r] = shape[r][c];
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) result[c][rows - 1 - r] = shape[r][c];
   return result;
 }
 // ---- Power-ups: todos operan sobre el tablero que reciben ----
@@ -209,7 +231,8 @@ function powerTint(board: Board) {
   const target = present[Math.floor(Math.random() * present.length)];
   for (let r = 0; r < ROWS; r++) {
     if (!board[r].includes(target)) continue;
-    for (let c = 0; c < COLS; c++) if (board[r][c] === target || board[r][c] === 0) board[r][c] = WILD;
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c] === target || board[r][c] === 0) board[r][c] = WILD;
   }
 }
 /** Compacta cada columna contra el fondo, eliminando huecos. */
@@ -420,7 +443,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     context.fillRect(px + 1, py + 1, size - 2, size - 2);
     context.fillStyle = "rgba(255,255,255,0.12)";
     context.fillRect(px + 1, py + 1, size - 2, 4);
-    context.font = `${Math.floor(size * 0.6)}px system-ui, sans-serif`;
+    context.font = POWER_BLOCK_FONT;
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillStyle = "#0f0f17";
@@ -464,7 +487,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
   }
   /** Rótulo pequeño del panel, en mayúsculas y espaciado. */
   function panelLabel(text: string, y: number) {
-    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = PANEL_LABEL_FONT;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = "#6f6f86";
@@ -486,6 +509,13 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     if (line) out.push(line);
     return out;
   }
+  // Caché de las líneas partidas del panel y del toast (H4/H5 de SPEC 13): `desc` sólo cambia
+  // cuando cambia el power-up activo, así que `wrap()` (split + array nuevo) se recalcula sólo
+  // entonces, no en cada frame.
+  let panelDescKey = "";
+  let panelDescLines: string[] = [];
+  let toastDescKey: PowerId | null = null;
+  let toastDescLines: string[] = [];
   // El panel sustituye al segundo canvas y a los <aside> del original: la pieza
   // siguiente, las líneas y el estado del power-up, dibujados en el mismo ctx.
   function drawPanel() {
@@ -512,7 +542,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     }
     // LÍNEAS: no tiene casilla en el HUD de la plataforma, así que vive aquí.
     panelLabel("LÍNEAS", boxY + 150);
-    ctx.font = "22px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = PANEL_LINES_FONT;
     ctx.fillStyle = "#e8e8f0";
     ctx.fillText(String(lines), PANEL_X + 12, boxY + 178);
     // PODER: lo que el original escribía en #power-status y #power-desc.
@@ -534,13 +564,17 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
         desc = "Aparece cada 5 líneas";
       }
     }
-    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = PANEL_TITLE_FONT;
     ctx.fillStyle = "#e8e8f0";
     ctx.fillText(titulo, PANEL_X + 12, boxY + 248);
-    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = PANEL_LABEL_FONT;
     ctx.fillStyle = "#6f6f86";
+    if (desc !== panelDescKey) {
+      panelDescKey = desc;
+      panelDescLines = wrap(desc, PANEL_W - 24);
+    }
     let y = boxY + 266;
-    for (const linea of wrap(desc, PANEL_W - 24)) {
+    for (const linea of panelDescLines) {
       ctx.fillText(linea, PANEL_X + 12, y);
       y += 12;
     }
@@ -565,15 +599,19 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
-    ctx.font = "20px system-ui, sans-serif";
+    ctx.font = TOAST_ICON_FONT;
     ctx.fillStyle = info.color;
     ctx.fillText(info.icon, x + 12, y + 32);
-    ctx.font = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = TOAST_NAME_FONT;
     ctx.fillText(info.name.toUpperCase(), x + 42, y + 30);
-    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.font = PANEL_LABEL_FONT;
     ctx.fillStyle = "#b9b9c9";
+    if (toastPower !== toastDescKey) {
+      toastDescKey = toastPower;
+      toastDescLines = wrap(info.desc, w - 54);
+    }
     let ty = y + 46;
-    for (const linea of wrap(info.desc, w - 54)) {
+    for (const linea of toastDescLines) {
       ctx.fillText(linea, x + 42, ty);
       ty += 11;
     }
