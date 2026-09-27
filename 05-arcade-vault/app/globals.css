@@ -287,6 +287,66 @@ body {
 .av-nav .hamburger {
   display: none;
 }
+/* SPEC 14: menú del usuario con sesión */
+.user-menu {
+  position: relative;
+}
+.user-menu-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.18);
+  z-index: 55;
+}
+.user-menu-pop .who {
+  padding: 8px 10px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  border-bottom: 1px dashed var(--line-2);
+}
+.user-menu-pop button {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 10px;
+  text-align: left;
+  font-family: var(--pixel);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--magenta);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.user-menu-pop button:hover,
+.user-menu-pop button:focus-visible {
+  background: rgba(255, 0, 110, 0.1);
+  text-shadow: 0 0 6px rgba(255, 0, 110, 0.6);
+  outline: 1px solid var(--magenta);
+}
+.av-mobile-panel .mobile-user {
+  padding: 14px 12px 6px;
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--yellow);
+}
+.av-mobile-panel .mobile-salir {
+  padding: 14px 12px;
+  text-align: left;
+  font-family: var(--pixel);
+  font-size: 11px;
+  color: var(--magenta);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--line-2);
+  cursor: pointer;
+}
 @media (max-width: 840px) {
   .av-nav {
     padding: 12px 16px;
