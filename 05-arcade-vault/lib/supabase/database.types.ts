@@ -7,7 +7,7 @@
 //     > lib/supabase/database.types.ts
 //
 // Regenerar cada vez que una spec añada o cambie una tabla. Esquema actual
-// (SPEC 06): tablas `games` y `scores`, vista `game_stats`.
+// (SPEC 14): tablas `games`, `scores` y `profiles`, vista `game_stats`.
 export type Json =
   | string
   | number
@@ -39,6 +39,24 @@ export type Database = {
           created_at?: string
           id?: string
           title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          username?: string
         }
         Relationships: []
       }
