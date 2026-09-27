@@ -7,10 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Arcade Vault: plataforma web para jugar juegos arcade online y competir por puntuación.
-Estado actual: 4 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
-**ARKANOID** y **SNAKE** — cada uno con leaderboard real en Supabase. El resto del catálogo
-(`gloton`, `invasores`, `ranaria`, `duelo-pixel`) sigue en modo maqueta, pintando
-`seededScores()` de `lib/games.ts` en vez de datos reales.
+Estado actual: 5 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
+**ARKANOID**, **SNAKE** y **FROGGER** (id `frogger`, nacido de la game-jam `ranaria`) — cada
+uno con leaderboard real en Supabase. El resto del catálogo (`gloton`, `invasores`,
+`duelo-pixel`) sigue en modo maqueta, pintando `seededScores()` de `lib/games.ts` en vez de
+datos reales.
 
 El README indica que el flujo de trabajo es **Spec Driven Design** con los comandos `/spec`
 y `/spec-impl` de las skills `Klerith/fernando-skills` (instalar con
@@ -43,7 +44,8 @@ No hay framework de tests configurado; si se añade uno, documentarlo aquí.
 ## Arquitectura de juegos
 
 Cada juego real vive en `lib/games/<slug>/engine.ts` (+ `sprites.ts` cuando usa spritesheet:
-`arkanoid`, `snake`) e implementa el contrato compartido de `lib/games/engine.ts`
+`arkanoid`, `snake`; + `skins.ts` con sus paletas: `asteroids`, `arkanoid`, `snake`, `frogger`;
+`arkanoid` además tiene `tint.ts`) e implementa el contrato compartido de `lib/games/engine.ts`
 (`GameCallbacks`, `GameEngine`, `GameFactory`): el motor dibuja en un `<canvas>` y reporta
 eventos por callbacks, sin React dentro. `lib/games/registry.ts` (`GAME_ENGINES`,
 `getEngine(id)`) mapea el slug al motor.
@@ -51,7 +53,7 @@ eventos por callbacks, sin React dentro. `lib/games/registry.ts` (`GAME_ENGINES`
 En el lado de React: `components/game-canvas.tsx` monta/desmonta el motor sobre el canvas;
 `components/game-player.tsx` (`GamePlayer`) es el orquestador — HUD, pausa, modal de guardar
 puntuación — y cae a una simulación `.game-arena` cuando `getEngine(id)` devuelve `undefined`
-(los 4 juegos aún sin motor). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
+(los 3 juegos aún sin motor). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
 mejores puntuaciones dentro de `GamePlayer` cuando `hasLeaderboard` es `true`.
 
 Móvil (SPEC 11): `components/touch-pad.tsx` (`TouchPad`) es un mando virtual común — cruceta
@@ -96,11 +98,11 @@ si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`
 El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
 aplicadas con `apply_migration` del MCP de Supabase.
 
-| Objeto       | Qué es                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 4 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake` y mas... mira /home/mariana/Escritorio/claudeCode/05-arcade-vault/References/resources/resources/implemented-games.md cuando lo necesiten. |
-| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                                                                                                                                                              |
-| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                                                                                  |
+| Objeto       | Qué es                                                                                                                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 5 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake`, `frogger`. Detalle en `References/resources/resources/implemented-games.md`. |
+| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                                                                                                 |
+| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                     |
 
 RLS activa en las dos tablas: `select` público, `insert` público en `scores`, y **ninguna**
 política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
@@ -108,8 +110,8 @@ política de `update` ni `delete`. La escritura pasa por la Server Action `guard
 garantía real, la acción existe para dar un mensaje legible.
 
 Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`) y devuelven el
-caso vacío ante un error en vez de lanzar. Los cuatro juegos sin fila en `games` (`gloton`,
-`invasores`, `ranaria`, `duelo-pixel`) siguen pintando `seededScores()` de `lib/games.ts`.
+caso vacío ante un error en vez de lanzar. Los tres juegos sin fila en `games` (`gloton`,
+`invasores`, `duelo-pixel`) siguen pintando `seededScores()` de `lib/games.ts`.
 
 Tras cualquier cambio de esquema hay que regenerar los tipos:
 
@@ -119,7 +121,9 @@ npx supabase gen types typescript --project-id wlofsbjzfzywdgvovibv > lib/supaba
 
 ## skills
 
-usa siempre /fronted-desing para diseñar la interfaz del usuario
+Todas viven en `.agents/skills/<nombre>/` con symlink en `.claude/skills/`.
+
+`/frontend-design`: úsala siempre para diseñar la interfaz del usuario.
 
 `nuevo-juego` (espejada en `.claude/skills/nuevo-juego/` y `.agents/skills/nuevo-juego/`, con
 `port-guide.md`): skill propia del repo que formaliza el flujo para portar un juego nuevo —
@@ -128,9 +132,11 @@ escribir la spec primero, motor sobre el contrato `GameFactory`, entrada en el c
 vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proceso cuando se
 agregue un juego.
 
-`/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README) siguen siendo el flujo
-general de Spec Driven Design. Ya hay 10 specs en `specs/01-...` a `specs/10-juego-snake.md`;
-seguir el mismo patrón de numeración al agregar una nueva.
+`/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 13 specs en
+`specs/01-...` a `specs/13-rendimiento-frogger.md`; seguir el mismo patrón de numeración al
+agregar una nueva. Las propuestas de juego de la game-jam van aparte en
+`specs/game-jam/<id>/` (hoy `ranaria/`).
 
 `/spec-impl-game` (skill propia en `.agents/skills/spec-impl-game/`, symlink en
 `.claude/skills/`): para specs de **juegos**. Sigue las Fases 1–4 de `/spec-impl` leyendo su
@@ -140,33 +146,18 @@ seguir el mismo patrón de numeración al agregar una nueva.
 
 ## Agentes
 
-`game-planner` (`.claude/agents/game-planner.md`): agente de planificación — decide qué juego
-portar o incorporar a continuación (de los 4 en maqueta, o uno nuevo) y registra la decisión.
-Solo planifica: nunca implementa motor, specs ni migraciones (eso lo hace la skill
-`nuevo-juego`). Lee su memoria en
-`References/resources/resources/game-suggestions-todo.md` (histórico de sugerencias previas,
-nunca la borra ni sobrescribe) y `References/resources/resources/implemented-games.md` +
-`lib/games.ts` + `lib/games/registry.ts` para el estado real del catálogo. Úsalo cuando el
-usuario pida ideas, priorización o planificación de qué juego sigue.
+Definidos en `.claude/agents/<nombre>.md`. Memorias en `References/resources/resources/`.
 
-`skin-designer` (`.claude/agents/skin-designer.md`): aplica los 3 skins obligatorios
-(`clasico` default, `neon`, `retro`), todos legibles en modo oscuro, **solo al juego que
-indique el usuario**, nunca a todos. Paletas en `lib/games/<slug>/skins.ts`, infra común en
-`lib/games/skins.ts` + selector en `GamePlayer`. Su memoria/guía de estado es
-`References/resources/resources/game-with-themes.md`.
+| Agente                     | Qué hace                                                                                                                | Memoria                    |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `game-planner`             | Decide qué juego portar o incorporar a continuación (de los 3 en maqueta, o uno nuevo). Solo planifica.                 | `game-suggestions-todo.md` |
+| `game-jam`                 | A partir de un tema inventa un juego nuevo y escribe ≥ 2 specs variantes en `specs/game-jam/<id>/`. No implementa.      | —                          |
+| `skin-designer`            | Aplica los 3 skins (`clasico`, `neon`, `retro`) legibles en modo oscuro a **un** juego, nunca a todos.                  | `game-with-themes.md`      |
+| `mobile-porter`            | Soporte táctil de SPEC 11 en **un** juego con motor: `touch` en el registry + CSS, verificado con Playwright.           | `mobile-status.md`         |
+| `game-performance-booster` | Revisa y corrige el rendimiento de **un** motor con la checklist C1–C8 de SPEC 13, midiendo antes/después con `?fps=1`. | `performance-status.md`    |
 
-`mobile-porter` (`.claude/agents/mobile-porter.md`): aplica y verifica el soporte táctil de
-SPEC 11 en **un** juego con motor — declara `touch` en `lib/games/registry.ts`, ajusta CSS
-`pointer: coarse` si hace falta y comprueba con Playwright móvil vertical y escritorio. Nunca
-toca `engine.ts`, el contrato ni Supabase; los juegos en maqueta van antes por `nuevo-juego`.
-Su memoria es `References/resources/resources/mobile-status.md`.
-
-`game-performance-booster` (`.claude/agents/game-performance-booster.md`): recibe el ID de **un**
-juego con motor y revisa/corrige su rendimiento con la checklist C1–C8 derivada de SPEC 13
-(`emit()` sólo en cambio, cero asignaciones en `draw()`, `ctx.font`/`measureText` cacheados, no
-dibujar en pausa, `destroy()` sin fugas…), midiendo antes/después con `?fps=1`. Nunca cambia
-mecánica, look de skins, contrato, registry, otros motores ni Supabase; la arquitectura de
-dibujo queda como pendiente. Su memoria es `References/resources/resources/performance-status.md`.
+Para restricciones, herramientas y pasos de cada agente, leer el `description` del frontmatter y
+el cuerpo de su archivo en `.claude/agents/`.
 
 ## Stack y convenciones
 
