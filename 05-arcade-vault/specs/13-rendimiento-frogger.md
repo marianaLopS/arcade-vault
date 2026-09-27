@@ -1,6 +1,6 @@
 # SPEC 13 — Rendimiento de FROGGER: avisos a React y memoria
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** `game-jam/ranaria/01-frogger-core`, SPEC 11
 > **Fecha:** 2026-09-25
 > **Objetivo:** Que FROGGER no pierda frames ni haga crecer la memoria del navegador desde que arranca, llevando puntos, vidas y nivel a `useRef` para que la partida no re-renderice React, y midiendo el resultado con un medidor de FPS.
