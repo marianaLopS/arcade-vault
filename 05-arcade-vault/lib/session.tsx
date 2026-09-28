@@ -1,82 +1,74 @@
 "use client";
-
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
-
-export type User = { name: string };
-
-const USER_KEY = "av_user";
-
-// ---------------------------------------------------------------------------
-// Store externo sobre localStorage.
-//
-// El servidor renderiza siempre "sin sesión" (getServerSnapshot → null) y React
-// vuelve a leer el valor real tras la hidratación, así que no hay desajuste.
-// ---------------------------------------------------------------------------
-
-/** `undefined` = todavía no se ha leído localStorage en este cliente. */
-let cachedUser: User | null | undefined = undefined;
-const listeners = new Set<() => void>();
-
-function readUser(): User | null {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
-}
-
-function subscribe(onChange: () => void) {
-  listeners.add(onChange);
-  return () => {
-    listeners.delete(onChange);
-  };
-}
-
-/** Devuelve siempre la misma referencia mientras la sesión no cambie. */
-function getSnapshot(): User | null {
-  if (cachedUser === undefined) cachedUser = readUser();
-  return cachedUser;
-}
-
-function getServerSnapshot(): User | null {
-  return null;
-}
-
-function setUser(next: User | null) {
-  cachedUser = next;
-  try {
-    if (next) localStorage.setItem(USER_KEY, JSON.stringify(next));
-    else localStorage.removeItem(USER_KEY);
-  } catch {
-    // localStorage deshabilitado: la sesión vive sólo en memoria.
-  }
-  listeners.forEach((l) => l());
-}
-
-// ---------------------------------------------------------------------------
-// Contexto
-// ---------------------------------------------------------------------------
-
-type SessionValue = {
-  user: User | null;
-  signIn: (user: User) => void;
-  signOut: () => void;
-};
-
+import { usePathname } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { cerrarSesion } from "@/app/acceso/actions";
+import { createClient } from "@/lib/supabase/client";
+/** `name` es `profiles.username`, ya en mayúsculas para pintarlo tal cual. */
+export type User = { id: string; name: string };
+type SessionValue = { user: User | null; loading: boolean; signOut: () => Promise<void> };
+/** Si el perfil no se puede leer, el usuario sigue con sesión bajo este nombre. */
+const NOMBRE_SIN_PERFIL = "JUGADOR";
 const SessionContext = createContext<SessionValue | null>(null);
-
+/**
+ * Sesión de Supabase Auth para Client Components (SPEC 14).
+ *
+ * Sólo LEE la sesión: entrar y salir son Server Actions de
+ * `app/acceso/actions.ts`, que escriben las cookies en el servidor. El cliente
+ * de navegador no recibe evento por esas cookies, así que además de
+ * `onAuthStateChange` se vuelve a leer la sesión en cada cambio de ruta (las
+ * acciones de entrar y salir siempre terminan en un `redirect`).
+ */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const user = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-
-  const signIn = useCallback((next: User) => setUser(next), []);
-  const signOut = useCallback(() => setUser(null), []);
-
-  const value = useMemo(() => ({ user, signIn, signOut }), [user, signIn, signOut]);
-
+  const pathname = usePathname();
+  /** `undefined` = todavía no se ha leído la sesión en este cliente. */
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
+  const [perfil, setPerfil] = useState<{ id: string; name: string } | null>(null);
+  // `getClaims` valida el JWT de la cookie sin ir a la red en cada navegación.
+  useEffect(() => {
+    let vivo = true;
+    createClient()
+      .auth.getClaims()
+      .then(({ data }) => {
+        if (vivo) setUserId(data?.claims?.sub ?? null);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [pathname]);
+  // Nada de llamadas a Supabase dentro del callback: puede bloquear el cliente.
+  useEffect(() => {
+    const { data } = createClient().auth.onAuthStateChange((_evento, session) => {
+      setUserId(session?.user.id ?? null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+  // El username se lee aparte, cada vez que cambia el usuario.
+  useEffect(() => {
+    if (!userId || perfil?.id === userId) return;
+    let vivo = true;
+    createClient()
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        if (error) console.error("[useSession] profiles", error.message);
+        setPerfil({ id: userId, name: data?.username.toUpperCase() ?? NOMBRE_SIN_PERFIL });
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [userId, perfil?.id]);
+  const user = userId && perfil?.id === userId ? perfil : null;
+  const loading = userId === undefined || (userId !== null && user === null);
+  const signOut = useCallback(async () => {
+    setUserId(null);
+    await cerrarSesion();
+  }, []);
+  const value = useMemo(() => ({ user, loading, signOut }), [user, loading, signOut]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
-
 export function useSession(): SessionValue {
   const value = useContext(SessionContext);
   if (!value) throw new Error("useSession debe usarse dentro de <SessionProvider>");

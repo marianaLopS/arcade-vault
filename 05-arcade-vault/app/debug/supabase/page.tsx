@@ -44,10 +44,7 @@ export default async function DebugSupabase() {
           </div>
           <div className="line dim">[OK] PROYECTO: {host}</div>
           <div className="line dim">[OK] CLAVE: {clave}</div>
-          <div
-            className="line success"
-            style={sesion.ok ? undefined : { color: "var(--magenta)" }}
-          >
+          <div className="line success" style={sesion.ok ? undefined : { color: "var(--magenta)" }}>
             &gt; {sesion.texto}
           </div>
           <div style={{ height: 1, background: "var(--line)", margin: "18px 0" }} />
@@ -58,8 +55,10 @@ export default async function DebugSupabase() {
         className="mono"
         style={{ marginTop: 20, fontSize: 12, lineHeight: 1.7, color: "var(--ink-dim)" }}
       >
-        Los dos bloques deben decir <strong style={{ color: "var(--green)" }}>SIN SESIÓN</strong>:
-        la SPEC 04 monta los clientes, no el login. La clave nunca se imprime; sólo su longitud.
+        Los dos bloques deben coincidir:{" "}
+        <strong style={{ color: "var(--green)" }}>SIN SESIÓN</strong> como invitado, o el mismo{" "}
+        <code>sub</code> con la sesión de SPEC 14 iniciada. La clave nunca se imprime; sólo su
+        longitud.
       </p>
     </div>
   );
