@@ -2,6 +2,7 @@
 import type { AuthError } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { COOKIE_RECUPERACION, usuarioEnRecuperacion } from "@/app/auth/recuperacion";
 import { COOKIE_PROVEEDOR, esProveedor, type Proveedor } from "@/app/auth/proveedor";
 import { createClient } from "@/lib/supabase/server";
 export type AuthResult = { ok: true; aviso?: string } | { ok: false; error: string };
@@ -190,7 +191,10 @@ export async function pedirRecuperacion(
   }
   return { ok: true, aviso: "SI EXISTE UNA CUENTA, TE HEMOS ENVIADO UN CORREO" };
 }
-/** Fija la nueva contraseña con la sesión que abrió el enlace de recuperación. */
+/**
+ * Fija la nueva contraseña. Sólo con la sesión que abrió el enlace de
+ * recuperación (cookie `av_recovery` del mismo usuario, ver `app/auth/recuperacion.ts`).
+ */
 export async function cambiarPassword(
   _prev: AuthResult | null,
   formData: FormData,
@@ -202,6 +206,8 @@ export async function cambiarPassword(
   }
   if (password !== confirmacion) return { ok: false, error: "LAS CONTRASEÑAS NO COINCIDEN" };
   try {
+    // La página ya lo comprueba, pero la acción se puede invocar sin pasar por ella.
+    if (!(await usuarioEnRecuperacion())) return { ok: false, error: "EL ENLACE HA CADUCADO" };
     const supabase = await createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
@@ -218,5 +224,7 @@ export async function cambiarPassword(
     console.error("[cambiarPassword]", e);
     return { ok: false, error: ERROR_GENERICO };
   }
+  // El enlace sirve para un solo cambio.
+  (await cookies()).delete(COOKIE_RECUPERACION);
   redirect("/biblioteca");
 }

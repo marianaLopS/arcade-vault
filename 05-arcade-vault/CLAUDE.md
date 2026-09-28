@@ -137,7 +137,7 @@ Supabase Auth con email + contraseña (confirmación de correo obligatoria), Goo
   ruta, porque las cookies las escriben las acciones en el servidor. El nav no pinta el botón de
   sesión mientras `loading`.
 - Pantallas: `/acceso` (pestañas + `REVISA TU CORREO`), `/acceso/recuperar`,
-  `/acceso/nueva-clave` (sin sesión redirige a `/acceso`). No hay rutas protegidas: se juega como
+  `/acceso/nueva-clave` (sólo con la sesión abierta por el correo de recuperación: `/auth/confirm` pone la cookie `av_recovery` = id del usuario, 15 min, y `cambiarPassword` la exige y la borra; además el `amr` firmado del JWT debe incluir `recovery` de hace menos de 15 min; si no, redirige a `/acceso`). No hay rutas protegidas: se juega como
   invitado.
 
 Configuración externa (manual, ya hecha en desarrollo): en el dashboard de Supabase, Site URL
