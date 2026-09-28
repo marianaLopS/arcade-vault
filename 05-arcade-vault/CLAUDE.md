@@ -93,6 +93,12 @@ las dos son públicas por diseño: la seguridad la da RLS, no el secreto de la c
 `service_role` **no** entra en este repositorio. A diferencia de `RESEND_API_KEY`, que degrada,
 si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`.
 
+- `SITE_URL` — URL pública del sitio, sin barra final (SPEC 16). Sólo servidor: la lee
+  `lib/site.ts` y la usa `entrarCon` para el `redirectTo` de OAuth. Opcional en desarrollo (cae a
+  `http://localhost:3000`); en producción es obligatoria y debe estar en las Redirect URLs de
+  Supabase. Sin ella la app arranca, pero entrar con Google/GitHub falla con
+  `FALTA SITE_URL EN .env.local` en el log: Next sólo carga el módulo al invocar la acción.
+
 ## Base de datos (Supabase)
 
 El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
@@ -166,6 +172,22 @@ por hora).
 - **Warning aceptado**: _Leaked password protection_ sólo existe en plan Pro; el proyecto es Free.
   Activarlo al pasar a Pro. Es el único aviso que debe dar `get_advisors` (security).
 - Configuración del dashboard no versionada: repetirla a mano si se recrea el proyecto.
+
+## Seguridad (SPEC 16)
+
+- **Secure password change** (dashboard, Auth > Providers > Email) activado: GoTrue pide
+  reautenticación para `updateUser({ password })` si la sesión tiene más de 24 h. Cierra el atajo
+  de cambiar la contraseña desde la consola sin pasar por `/acceso/nueva-clave`. Una sesión de
+  menos de 24 h todavía puede hacerlo: mitigación parcial aceptada.
+- **Registro sin enumeración**: `registrar` responde `REVISA TU CORREO` también si el email ya
+  tiene cuenta (identidades vacías, `user_already_exists` o `email_exists`), igual que
+  `pedirRecuperacion`. `ESE USUARIO YA EXISTE` se mantiene: los usernames son públicos.
+- **Cookies propias** `av_recovery` y `av_oauth`: `httpOnly`, `sameSite: "lax"` y
+  `secure` sólo en producción (en `http://localhost` el navegador las descartaría).
+- **`amr`**: `usuarioEnRecuperacion` sólo acepta entradas `{ method: "recovery", timestamp }` de
+  hace menos de 15 min; el formato string sin fecha no cuenta.
+- **Origen de OAuth**: `redirectTo` sale de `SITE_URL`, nunca de las cabeceras `Origin` o
+  `x-forwarded-host`.
 
 ## skills
 
