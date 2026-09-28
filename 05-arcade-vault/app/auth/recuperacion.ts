@@ -20,14 +20,14 @@ export const OPCIONES_RECUPERACION = {
 /**
  * `amr` del JWT (firmado por Supabase, no falsificable desde el navegador):
  * ¿la sesión se abrió con un enlace de recuperación hace menos de `PLAZO`?
- * Admite los dos formatos de la claim: `AMREntry[]` con `timestamp` en
- * segundos, o `string[]` (RFC 8176) sin fecha, donde el plazo lo pone la cookie.
+ * Sólo cuentan entradas `AMREntry` con `timestamp` en segundos (SPEC 16): el
+ * formato `string[]` (RFC 8176) no trae fecha, y aceptarlo dejaría el plazo en
+ * manos de la cookie, que se puede fabricar con el id del usuario.
  */
 function amrDeRecuperacion(amr: unknown): boolean {
   if (!Array.isArray(amr)) return false;
   const ahora = Date.now() / 1000;
   return amr.some((entrada: unknown) => {
-    if (entrada === "recovery") return true;
     if (typeof entrada !== "object" || entrada === null) return false;
     const { method, timestamp } = entrada as { method?: unknown; timestamp?: unknown };
     return method === "recovery" && typeof timestamp === "number" && ahora - timestamp < PLAZO;
