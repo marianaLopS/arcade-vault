@@ -3,7 +3,7 @@
 > **Estado:** Aprobado
 > **Depende de:** SPEC 04, SPEC 06, SPEC 14
 > **Fecha:** 2026-09-27
-> **Objetivo:** Cerrar el checklist de seguridad básico (`References/resources/resources/security/security-checklist.md`) endureciendo RLS de `scores`, exigiendo contraseñas fuertes en Supabase y en la UI, limitando signups por IP, eliminando la función expuesta `rls_auto_enable()` y enviando headers de seguridad desde Next.js.
+> **Objetivo:** Cerrar el checklist de seguridad básico (`References/resources/resources/security/security-checklist.md`) endureciendo RLS de `scores`, exigiendo contraseñas fuertes en Supabase y en la UI, limitando signups por IP, quitando a `anon`/`authenticated` el permiso de ejecutar `rls_auto_enable()` y enviando headers de seguridad desde Next.js.
 
 ## Por qué existe esta spec
 
@@ -19,8 +19,10 @@ Estado al escribir la spec:
 | Headers en Next.js | Ninguno. |
 | Panel de warnings | 2 lints por `public.rls_auto_enable()` (SECURITY DEFINER ejecutable por `anon` y `authenticated`) + leaked password. |
 
-`rls_auto_enable()` no la creó ninguna migración del repo (la generó Supabase) y ningún event
-trigger la usa: se elimina.
+`rls_auto_enable()` no la creó ninguna migración del repo (la generó Supabase). **Corrección
+durante la implementación:** sí la usa el event trigger `ensure_rls` (`ddl_command_end` en
+`CREATE TABLE`), que activa RLS en cada tabla nueva. El `drop` falló por esa dependencia, así que la
+función se mantiene y se le revoca `EXECUTE`.
 
 ## Alcance
 
@@ -28,7 +30,7 @@ trigger la usa: se elimina.
 
 - **Migración** `supabase/migrations/20260927130000_seguridad_basica.sql`, aplicada con
   `apply_migration` del MCP:
-  - `drop function if exists public.rls_auto_enable();`
+  - `revoke execute on function public.rls_auto_enable() from public, anon, authenticated;`
   - `scores.user_id uuid null references auth.users(id) on delete set null` (null = invitado).
   - Sustituir la política de insert de `scores` por una que exige
     `user_id is null or user_id = (select auth.uid())`: nadie puede firmar una puntuación en nombre
@@ -103,8 +105,8 @@ export const config = {
 
 ```sql
 -- SPEC 15: seguridad básica.
--- Función generada por Supabase, SECURITY DEFINER y ejecutable por anon/authenticated. No se usa.
-drop function if exists public.rls_auto_enable();
+-- Función generada por Supabase y usada por el event trigger `ensure_rls`. Se queda, sin EXECUTE para la API.
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
 
 -- Autor de la puntuación: null = invitado. Si se borra la cuenta, la marca queda como invitado.
 alter table public.scores
@@ -143,7 +145,7 @@ persistidos.
 ## Criterios de aceptación
 
 - [ ] `get_advisors(security)` devuelve **sólo** `auth_leaked_password_protection`.
-- [ ] `select * from pg_proc where proname = 'rls_auto_enable'` devuelve 0 filas.
+- [ ] `anon` y `authenticated` no tienen `EXECUTE` sobre `rls_auto_enable()`, y el event trigger `ensure_rls` sigue activo.
 - [ ] RLS activa (`rls_enabled: true`) en `games`, `scores` y `profiles`.
 - [ ] `games` no tiene políticas de insert, update ni delete.
 - [ ] `scores` tiene una sola política de insert, con `user_id is null or user_id = auth.uid()`, y
@@ -172,7 +174,7 @@ persistidos.
 | --- | --- | --- |
 | `user_id` nullable + política `null or propia` | Sólo autenticados guardan | Se sigue jugando como invitado (SPEC 14). Lo importante es que nadie pueda firmar por otro. |
 | Añadir `user_id` en esta spec | Esperar a la spec de vincular puntuaciones | La usuaria quiere que la política de insert ya dependa de `auth.uid()`. Aquí sólo se guarda; enseñarlo es de la otra spec. |
-| Borrar `rls_auto_enable()` | Revocar `EXECUTE` o pasarla a `SECURITY INVOKER` | No está en migraciones, ningún trigger la usa y la usuaria no la necesita. |
+| Revocar `EXECUTE` de `rls_auto_enable()` | Borrarla con `drop ... cascade` | El plan original era borrarla, pero la usa el event trigger `ensure_rls`, que sirve de red de seguridad (las tablas nuevas nacen con RLS). Revocar basta para que el advisor deje de marcarla. |
 | Regex con los 4 tipos de carácter, igual que "Lowercase, uppercase letters, digits and symbols" de Supabase | Sólo longitud 8 | Pedido explícito. Además compensa en parte que no haya leaked password protection en Free. |
 | Validar al enviar | Lista de requisitos en vivo | Menos UI y reutiliza `.form-error` y `shake`. |
 | Regla en `lib/password.ts` compartida | Duplicarla en cliente y servidor | Una sola fuente de verdad. `actions.ts` es `"use server"` y no puede exportar constantes al cliente. |
