@@ -1,10 +1,11 @@
+import { esProveedor } from "@/app/auth/proveedor";
 import { AuthCard } from "./auth-card";
 export const metadata = { title: "Acceso · Arcade Vault" };
 /** Errores que llegan en la URL desde `/auth/confirm` y `/auth/callback`. */
 function errorDeUrl(error: string | undefined, proveedor: string | undefined): string | null {
   if (error === "enlace") return "EL ENLACE HA CADUCADO";
   if (error === "oauth") {
-    const nombre = proveedor === "google" || proveedor === "github" ? proveedor : "EL PROVEEDOR";
+    const nombre = esProveedor(proveedor) ? proveedor : "EL PROVEEDOR";
     return `NO SE PUDO CONECTAR CON ${nombre.toUpperCase()}`;
   }
   return null;

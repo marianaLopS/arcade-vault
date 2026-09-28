@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
-import { iniciarSesion, registrar, type AuthResult } from "./actions";
+import type { Proveedor } from "@/app/auth/proveedor";
+import { entrarCon, iniciarSesion, registrar, type AuthResult } from "./actions";
 type Tab = "in" | "up";
 type Campos = { username: string; email: string; password: string };
 /**
@@ -22,6 +23,11 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
     null,
   );
   const [alta, crear, creando] = useActionState<AuthResult | null, FormData>(registrar, null);
+  // Si el proveedor responde, `entrarCon` redirige fuera y esto no vuelve.
+  const [oauth, conectar, conectando] = useActionState<AuthResult | null, Proveedor>(
+    (_prev, proveedor) => entrarCon(proveedor),
+    null,
+  );
   const set = (campo: keyof Campos) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setCampos({ ...campos, [campo]: e.target.value });
   const cambiarTab = (next: Tab) => {
@@ -179,14 +185,19 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
         JUGAR COMO INVITADO
       </button>
       <div className="auth-divider">O CONTINÚA CON</div>
-      <div className="social">
-        <button className="btn ghost" type="button">
+      <form className="social">
+        <button className="btn ghost" formAction={() => conectar("google")} disabled={conectando}>
           ◆ GOOGLE
         </button>
-        <button className="btn ghost" type="button">
+        <button className="btn ghost" formAction={() => conectar("github")} disabled={conectando}>
           ▣ GITHUB
         </button>
-      </div>
+      </form>
+      {oauth && !oauth.ok && (
+        <p className="form-error pixel" role="alert" style={{ marginTop: 12 }}>
+          ▸ {oauth.error}
+        </p>
+      )}
       <div
         style={{
           marginTop: 18,

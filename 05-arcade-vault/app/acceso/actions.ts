@@ -1,12 +1,15 @@
 "use server";
 import type { AuthError } from "@supabase/supabase-js";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { COOKIE_PROVEEDOR, esProveedor, type Proveedor } from "@/app/auth/proveedor";
 import { createClient } from "@/lib/supabase/server";
 export type AuthResult = { ok: true; aviso?: string } | { ok: false; error: string };
 const USERNAME = /^[a-z0-9_]{3,16}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
 const ERROR_GENERICO = "ALGO FALLÓ. INTÉNTALO DE NUEVO";
+
 /** Traduce el error de Supabase Auth al mensaje de la tabla de SPEC 14. */
 function mensajeDe(error: AuthError): string {
   switch (error.code) {
@@ -112,4 +115,52 @@ export async function cerrarSesion(): Promise<void> {
     console.error("[cerrarSesion]", e);
   }
   redirect("/");
+}
+/** Origen de la petición (`http://localhost:3000` en desarrollo), para la vuelta del proveedor. */
+async function origen(): Promise<string> {
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin) return origin;
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+/**
+ * Inicia el flujo OAuth (PKCE) con Google o GitHub. El verificador PKCE queda
+ * en una cookie y el proveedor vuelve a `/auth/callback`.
+ */
+export async function entrarCon(proveedor: Proveedor): Promise<AuthResult> {
+  if (!esProveedor(proveedor)) return { ok: false, error: ERROR_GENERICO };
+  const fallo = `NO SE PUDO CONECTAR CON ${proveedor.toUpperCase()}`;
+  let url: string;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: proveedor,
+      options: { redirectTo: `${await origen()}/auth/callback`, skipBrowserRedirect: true },
+    });
+    if (error || !data.url) {
+      console.error("[entrarCon]", proveedor, error?.code ?? error?.message);
+      return { ok: false, error: fallo };
+    }
+    // Con el proveedor desactivado Supabase no avisa aquí: la URL existe pero
+    // su `/authorize` responde 400 con un JSON. Se comprueba antes de mandar
+    // al usuario a esa página en crudo; si está bien configurado, redirige.
+    const prueba = await fetch(data.url, { redirect: "manual" });
+    if (prueba.status < 300 || prueba.status >= 400) {
+      console.error("[entrarCon]", proveedor, "authorize", prueba.status);
+      return { ok: false, error: fallo };
+    }
+    url = data.url;
+    (await cookies()).set(COOKIE_PROVEEDOR, proveedor, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 600,
+    });
+  } catch (e) {
+    console.error("[entrarCon]", proveedor, e);
+    return { ok: false, error: fallo };
+  }
+  redirect(url);
 }
