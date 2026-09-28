@@ -35,7 +35,13 @@ export async function guardarScore(input: {
     if (!juego) {
       return { ok: false, error: "ESTE JUEGO TODAVÍA NO TIENE MARCADOR" };
     }
-    const { error } = await supabase.from("scores").insert({ game_id: game, player, score });
+    // Con sesión, la marca se firma con la cuenta; sin ella, es de invitado. La
+    // política de insert (SPEC 15) rechaza un `user_id` que no sea el propio.
+    const { data: sesion } = await supabase.auth.getClaims();
+    const user_id = sesion?.claims.sub ?? null;
+    const { error } = await supabase
+      .from("scores")
+      .insert({ game_id: game, player, score, user_id });
     if (error) {
       console.error("[guardarScore] insert", game, error.message);
       return { ok: false, error: "NO SE PUDO GUARDAR LA PUNTUACIÓN. INTÉNTALO DE NUEVO" };
