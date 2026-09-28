@@ -150,6 +150,7 @@ export async function entrarCon(proveedor: Proveedor): Promise<AuthResult> {
     (await cookies()).set(COOKIE_PROVEEDOR, proveedor, {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 600,
     });

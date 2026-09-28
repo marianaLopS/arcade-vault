@@ -111,11 +111,13 @@ export const OPCIONES_RECUPERACION = {
 - [ ] Ninguna respuesta de `registrar` contiene `ESE CORREO YA TIENE CUENTA`.
 - [ ] Registrarse con un username ocupado sigue mostrando `ESE USUARIO YA EXISTE`.
 - [ ] La vista de éxito del registro dice `Si el correo es nuevo, te enviamos un enlace de
-    confirmación a` y enlaza a `/acceso/recuperar`.
+  confirmación a` y enlaza a `/acceso/recuperar`.
 - [ ] `grep -nE "headers\(\)|x-forwarded-host|origen\(" app/acceso/actions.ts` no devuelve nada.
 - [ ] En `npm run dev`, sin `SITE_URL`, entrar con Google y con GitHub vuelve a
       `http://localhost:3000/auth/callback` y abre sesión.
-- [ ] `npm start` sobre el build, sin `SITE_URL`, falla con `FALTA SITE_URL EN .env.local`.
+- [ ] Sobre el build (`npm start`) sin `SITE_URL`, entrar con Google o GitHub falla y el log del
+      servidor muestra `FALTA SITE_URL EN .env.local`. El resto de la app arranca y funciona: Next
+      sólo carga el módulo de la acción al invocarla, así que el error no sale al arrancar.
 - [ ] En el build de producción, `av_oauth` y `av_recovery` llevan el atributo `Secure`. En
       `npm run dev` no lo llevan.
 - [ ] `amrDeRecuperacion(["recovery"])` devuelve `false`.

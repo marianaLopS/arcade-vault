@@ -12,6 +12,8 @@ const PLAZO = 15 * 60;
 export const OPCIONES_RECUPERACION = {
   httpOnly: true,
   sameSite: "lax",
+  // En `http://localhost` el navegador descartaría una cookie `Secure`.
+  secure: process.env.NODE_ENV === "production",
   path: "/",
   maxAge: PLAZO,
 } as const;
