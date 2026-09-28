@@ -1,16 +1,16 @@
 "use server";
 import type { AuthError } from "@supabase/supabase-js";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE_RECUPERACION, usuarioEnRecuperacion } from "@/app/auth/recuperacion";
 import { COOKIE_PROVEEDOR, esProveedor, type Proveedor } from "@/app/auth/proveedor";
 import { ERROR_PASSWORD, esPasswordFuerte } from "@/lib/password";
+import { SITE_URL } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 export type AuthResult = { ok: true; aviso?: string } | { ok: false; error: string };
 const USERNAME = /^[a-z0-9_]{3,16}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ERROR_GENERICO = "ALGO FALLÓ. INTÉNTALO DE NUEVO";
-
 /** Traduce el error de Supabase Auth al mensaje de la tabla de SPEC 14. */
 function mensajeDe(error: AuthError): string {
   switch (error.code) {
@@ -120,15 +120,6 @@ export async function cerrarSesion(): Promise<void> {
   }
   redirect("/");
 }
-/** Origen de la petición (`http://localhost:3000` en desarrollo), para la vuelta del proveedor. */
-async function origen(): Promise<string> {
-  const h = await headers();
-  const origin = h.get("origin");
-  if (origin) return origin;
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 /**
  * Inicia el flujo OAuth (PKCE) con Google o GitHub. El verificador PKCE queda
  * en una cookie y el proveedor vuelve a `/auth/callback`.
@@ -141,7 +132,7 @@ export async function entrarCon(proveedor: Proveedor): Promise<AuthResult> {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: proveedor,
-      options: { redirectTo: `${await origen()}/auth/callback`, skipBrowserRedirect: true },
+      options: { redirectTo: `${SITE_URL}/auth/callback`, skipBrowserRedirect: true },
     });
     if (error || !data.url) {
       console.error("[entrarCon]", proveedor, error?.code ?? error?.message);
