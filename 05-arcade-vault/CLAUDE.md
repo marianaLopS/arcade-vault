@@ -101,10 +101,11 @@ aplicadas con `apply_migration` del MCP de Supabase.
 | Objeto       | Qué es                                                                                                                                                                                                                                                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 5 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake`, `frogger`. Detalle en `References/resources/resources/implemented-games.md`. |
-| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: la identidad llega con la spec de autenticación.                                                                                                                                                 |
+| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: vincularlas a la cuenta es la spec siguiente a SPEC 14.                                                                                                                                          |
+| `profiles`   | 1:1 con `auth.users` (SPEC 14): `username` único `^[a-z0-9_]{3,16}$`, siempre en minúsculas (la UI lo pinta en mayúsculas). Lo crea el trigger `on_auth_user_created` (`handle_new_user()`, `security definer`) con sufijo numérico si choca. `select` público, sin políticas de escritura.                         |
 | `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                     |
 
-RLS activa en las dos tablas: `select` público, `insert` público en `scores`, y **ninguna**
+RLS activa en `games` y `scores`: `select` público, `insert` público en `scores`, y **ninguna**
 política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
 (`app/jugar/actions.ts`), que valida y hace `revalidatePath`; los `CHECK` de la tabla son la
 garantía real, la acción existe para dar un mensaje legible.
@@ -118,6 +119,34 @@ Tras cualquier cambio de esquema hay que regenerar los tipos:
 ```bash
 npx supabase gen types typescript --project-id wlofsbjzfzywdgvovibv > lib/supabase/database.types.ts
 ```
+
+## Autenticación (SPEC 14)
+
+Supabase Auth con email + contraseña (confirmación de correo obligatoria), Google y GitHub.
+
+- **Entrar y salir son Server Actions** de `app/acceso/actions.ts` (`registrar`, `iniciarSesion`,
+  `entrarCon`, `cerrarSesion`, `pedirRecuperacion`, `cambiarPassword`): devuelven `AuthResult` con
+  mensajes en mayúsculas y nunca lanzan. No llamar a `supabase.auth.*` desde componentes para
+  entrar o salir.
+- **Route Handlers**: `/auth/confirm` verifica el `token_hash` de los correos (`type=email` →
+  `/biblioteca`, `type=recovery` → `/acceso/nueva-clave`, fallo → `/acceso?error=enlace`);
+  `/auth/callback` canjea el `code` de OAuth (fallo → `/acceso?error=oauth&proveedor=…`, el
+  proveedor viaja en la cookie `av_oauth`, ver `app/auth/proveedor.ts`).
+- **`useSession()`** (`lib/session.tsx`) sólo lee: `{ user: { id, name } | null, loading, signOut }`.
+  `name` es `profiles.username` en mayúsculas. Relee la sesión con `getClaims` en cada cambio de
+  ruta, porque las cookies las escriben las acciones en el servidor. El nav no pinta el botón de
+  sesión mientras `loading`.
+- Pantallas: `/acceso` (pestañas + `REVISA TU CORREO`), `/acceso/recuperar`,
+  `/acceso/nueva-clave` (sin sesión redirige a `/acceso`). No hay rutas protegidas: se juega como
+  invitado.
+
+Configuración externa (manual, ya hecha en desarrollo): en el dashboard de Supabase, Site URL
+`http://localhost:3000` y Redirect URLs `/auth/callback` y `/auth/confirm`; "Confirm email"
+activado; plantillas "Confirm signup" y "Reset password" con enlace
+`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` (o `type=recovery`); clientes
+OAuth de Google Cloud y GitHub con callback `https://wlofsbjzfzywdgvovibv.supabase.co/auth/v1/callback`.
+En producción hay que añadir las URLs del dominio. SMTP: el de Supabase por defecto (pocos correos
+por hora).
 
 ## skills
 
@@ -133,8 +162,8 @@ vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proces
 agregue un juego.
 
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
-`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 13 specs en
-`specs/01-...` a `specs/13-rendimiento-frogger.md`; seguir el mismo patrón de numeración al
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 14 specs en
+`specs/01-...` a `specs/14-autenticacion.md`; seguir el mismo patrón de numeración al
 agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 `specs/game-jam/<id>/` (hoy `ranaria/`).
 
