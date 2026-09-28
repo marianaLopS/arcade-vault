@@ -196,13 +196,14 @@ agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 
 Definidos en `.claude/agents/<nombre>.md`. Memorias en `References/resources/resources/`.
 
-| Agente                     | Qué hace                                                                                                                | Memoria                    |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `game-planner`             | Decide qué juego portar o incorporar a continuación (de los 3 en maqueta, o uno nuevo). Solo planifica.                 | `game-suggestions-todo.md` |
-| `game-jam`                 | A partir de un tema inventa un juego nuevo y escribe ≥ 2 specs variantes en `specs/game-jam/<id>/`. No implementa.      | —                          |
-| `skin-designer`            | Aplica los 3 skins (`clasico`, `neon`, `retro`) legibles en modo oscuro a **un** juego, nunca a todos.                  | `game-with-themes.md`      |
-| `mobile-porter`            | Soporte táctil de SPEC 11 en **un** juego con motor: `touch` en el registry + CSS, verificado con Playwright.           | `mobile-status.md`         |
-| `game-performance-booster` | Revisa y corrige el rendimiento de **un** motor con la checklist C1–C8 de SPEC 13, midiendo antes/después con `?fps=1`. | `performance-status.md`    |
+| Agente                     | Qué hace                                                                                                                                                 | Memoria                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `game-planner`             | Decide qué juego portar o incorporar a continuación (de los 3 en maqueta, o uno nuevo). Solo planifica.                                                  | `game-suggestions-todo.md`    |
+| `game-jam`                 | A partir de un tema inventa un juego nuevo y escribe ≥ 2 specs variantes en `specs/game-jam/<id>/`. No implementa.                                       | —                             |
+| `skin-designer`            | Aplica los 3 skins (`clasico`, `neon`, `retro`) legibles en modo oscuro a **un** juego, nunca a todos.                                                   | `game-with-themes.md`         |
+| `mobile-porter`            | Soporte táctil de SPEC 11 en **un** juego con motor: `touch` en el registry + CSS, verificado con Playwright.                                            | `mobile-status.md`            |
+| `game-performance-booster` | Revisa y corrige el rendimiento de **un** motor con la checklist C1–C8 de SPEC 13, midiendo antes/después con `?fps=1`.                                  | `performance-status.md`       |
+| `security-auditor`         | Auditoría completa de seguridad de BD (advisors, RLS, grants, funciones) y app (headers, actions, auth, secretos) contra SPEC 14/15. Solo lee y propone. | `security/security-status.md` |
 
 Para restricciones, herramientas y pasos de cada agente, leer el `description` del frontmatter y
 el cuerpo de su archivo en `.claude/agents/`.
