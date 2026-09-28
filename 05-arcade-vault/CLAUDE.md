@@ -101,12 +101,13 @@ aplicadas con `apply_migration` del MCP de Supabase.
 | Objeto       | Qué es                                                                                                                                                                                                                                                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 5 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake`, `frogger`. Detalle en `References/resources/resources/implemented-games.md`. |
-| `scores`     | Puntuaciones anónimas: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000). Sin `user_id`: vincularlas a la cuenta es la spec siguiente a SPEC 14.                                                                                                                                          |
+| `scores`     | Puntuaciones: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000), `user_id` (FK a `auth.users`, `null` = invitado; SPEC 15). Enseñarlas por cuenta es la spec siguiente.                                                                                                                   |
 | `profiles`   | 1:1 con `auth.users` (SPEC 14): `username` único `^[a-z0-9_]{3,16}$`, siempre en minúsculas (la UI lo pinta en mayúsculas). Lo crea el trigger `on_auth_user_created` (`handle_new_user()`, `security definer`) con sufijo numérico si choca. `select` público, sin políticas de escritura.                         |
 | `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                     |
 
-RLS activa en `games` y `scores`: `select` público, `insert` público en `scores`, y **ninguna**
-política de `update` ni `delete`. La escritura pasa por la Server Action `guardarScore`
+RLS activa en `games`, `scores` y `profiles`: `select` público; `insert` en `scores` sólo con
+`user_id is null or user_id = auth.uid()` (nadie firma por otra cuenta); **ninguna** política de
+`update` ni `delete`. `guardarScore` rellena `user_id` con `getClaims()` o `null`. La escritura pasa por la Server Action `guardarScore`
 (`app/jugar/actions.ts`), que valida y hace `revalidatePath`; los `CHECK` de la tabla son la
 garantía real, la acción existe para dar un mensaje legible.
 
@@ -148,6 +149,24 @@ OAuth de Google Cloud y GitHub con callback `https://wlofsbjzfzywdgvovibv.supaba
 En producción hay que añadir las URLs del dominio. SMTP: el de Supabase por defecto (pocos correos
 por hora).
 
+## Seguridad (SPEC 15)
+
+- **Contraseña**: mínimo 8 con minúscula, mayúscula, dígito y símbolo. La regla vive en
+  `lib/password.ts` (`esPasswordFuerte`, `ERROR_PASSWORD`) y la usan los formularios (registro y
+  `/acceso/nueva-clave` validan antes de enviar) y `registrar`/`cambiarPassword`. El login no la
+  exige (cuentas antiguas). En el dashboard: _Minimum password length_ 8 y _Password requirements_
+  "Lowercase, uppercase letters, digits and symbols". Si se cambia una, cambiar la otra;
+  `weak_password` se traduce a `ERROR_PASSWORD`.
+- **Rate limit** (dashboard, Auth > Rate Limits): sign-ups y sign-ins 10 / 5 min por IP.
+- **Headers** en `next.config.ts` para todas las rutas: `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  `X-DNS-Prefetch-Control: off`. CSP y HSTS pendientes (otra spec).
+- **`rls_auto_enable()`** (generada por Supabase) la usa el event trigger `ensure_rls`, que activa
+  RLS en cada tabla nueva: no borrarla. Sin `EXECUTE` para `anon`/`authenticated`.
+- **Warning aceptado**: _Leaked password protection_ sólo existe en plan Pro; el proyecto es Free.
+  Activarlo al pasar a Pro. Es el único aviso que debe dar `get_advisors` (security).
+- Configuración del dashboard no versionada: repetirla a mano si se recrea el proyecto.
+
 ## skills
 
 Todas viven en `.agents/skills/<nombre>/` con symlink en `.claude/skills/`.
@@ -162,8 +181,8 @@ vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proces
 agregue un juego.
 
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
-`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 14 specs en
-`specs/01-...` a `specs/14-autenticacion.md`; seguir el mismo patrón de numeración al
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 15 specs en
+`specs/01-...` a `specs/15-seguridad-basica.md`; seguir el mismo patrón de numeración al
 agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 `specs/game-jam/<id>/` (hoy `ranaria/`).
 
@@ -177,13 +196,14 @@ agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 
 Definidos en `.claude/agents/<nombre>.md`. Memorias en `References/resources/resources/`.
 
-| Agente                     | Qué hace                                                                                                                | Memoria                    |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `game-planner`             | Decide qué juego portar o incorporar a continuación (de los 3 en maqueta, o uno nuevo). Solo planifica.                 | `game-suggestions-todo.md` |
-| `game-jam`                 | A partir de un tema inventa un juego nuevo y escribe ≥ 2 specs variantes en `specs/game-jam/<id>/`. No implementa.      | —                          |
-| `skin-designer`            | Aplica los 3 skins (`clasico`, `neon`, `retro`) legibles en modo oscuro a **un** juego, nunca a todos.                  | `game-with-themes.md`      |
-| `mobile-porter`            | Soporte táctil de SPEC 11 en **un** juego con motor: `touch` en el registry + CSS, verificado con Playwright.           | `mobile-status.md`         |
-| `game-performance-booster` | Revisa y corrige el rendimiento de **un** motor con la checklist C1–C8 de SPEC 13, midiendo antes/después con `?fps=1`. | `performance-status.md`    |
+| Agente                     | Qué hace                                                                                                                                                 | Memoria                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `game-planner`             | Decide qué juego portar o incorporar a continuación (de los 3 en maqueta, o uno nuevo). Solo planifica.                                                  | `game-suggestions-todo.md`    |
+| `game-jam`                 | A partir de un tema inventa un juego nuevo y escribe ≥ 2 specs variantes en `specs/game-jam/<id>/`. No implementa.                                       | —                             |
+| `skin-designer`            | Aplica los 3 skins (`clasico`, `neon`, `retro`) legibles en modo oscuro a **un** juego, nunca a todos.                                                   | `game-with-themes.md`         |
+| `mobile-porter`            | Soporte táctil de SPEC 11 en **un** juego con motor: `touch` en el registry + CSS, verificado con Playwright.                                            | `mobile-status.md`            |
+| `game-performance-booster` | Revisa y corrige el rendimiento de **un** motor con la checklist C1–C8 de SPEC 13, midiendo antes/después con `?fps=1`.                                  | `performance-status.md`       |
+| `security-auditor`         | Auditoría completa de seguridad de BD (advisors, RLS, grants, funciones) y app (headers, actions, auth, secretos) contra SPEC 14/15. Solo lee y propone. | `security/security-status.md` |
 
 Para restricciones, herramientas y pasos de cada agente, leer el `description` del frontmatter y
 el cuerpo de su archivo en `.claude/agents/`.

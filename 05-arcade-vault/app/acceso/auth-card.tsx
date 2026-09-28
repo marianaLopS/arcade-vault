@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import type { Proveedor } from "@/app/auth/proveedor";
+import { ERROR_PASSWORD, esPasswordFuerte } from "@/lib/password";
 import { AuthHeader } from "./auth-header";
 import { entrarCon, iniciarSesion, registrar, type AuthResult } from "./actions";
 type Tab = "in" | "up";
@@ -19,6 +20,8 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
   const [tab, setTab] = useState<Tab>("in");
   const [campos, setCampos] = useState<Campos>({ username: "", email: "", password: "" });
   const [errorUrl, setErrorUrl] = useState(errorInicial);
+  // Contraseña que no cumple la regla (SPEC 15): se avisa sin llamar a la acción.
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const [entrada, entrar, entrando] = useActionState<AuthResult | null, FormData>(
     iniciarSesion,
     null,
@@ -34,9 +37,10 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
   const cambiarTab = (next: Tab) => {
     setTab(next);
     setErrorUrl(null);
+    setErrorLocal(null);
   };
   const resultado = tab === "in" ? entrada : alta;
-  const error = resultado && !resultado.ok ? resultado.error : errorUrl;
+  const error = errorLocal ?? (resultado && !resultado.ok ? resultado.error : errorUrl);
   const enviado = tab === "up" && alta?.ok;
   const pendiente = tab === "in" ? entrando : creando;
   return (
@@ -88,6 +92,11 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
           className={error ? "auth-form shake" : "auth-form"}
           action={(fd) => {
             setErrorUrl(null);
+            if (tab === "up" && !esPasswordFuerte(campos.password)) {
+              setErrorLocal(ERROR_PASSWORD);
+              return;
+            }
+            setErrorLocal(null);
             return tab === "in" ? entrar(fd) : crear(fd);
           }}
         >
@@ -140,7 +149,7 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
             />
             {tab === "up" ? (
               <p className="field-hint" id="av-pass-ayuda">
-                Mínimo 8 caracteres
+                Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo
               </p>
             ) : (
               <Link className="auth-forgot" href="/acceso/recuperar">

@@ -1,5 +1,6 @@
 "use client";
 import { useActionState, useState } from "react";
+import { ERROR_PASSWORD, esPasswordFuerte } from "@/lib/password";
 import { cambiarPassword, type AuthResult } from "../actions";
 /** Contraseña nueva + confirmación. Si va bien, la acción redirige a la biblioteca. */
 export function NuevaClaveForm() {
@@ -8,9 +9,21 @@ export function NuevaClaveForm() {
     cambiarPassword,
     null,
   );
-  const error = estado && !estado.ok ? estado.error : null;
+  // Contraseña que no cumple la regla (SPEC 15): se avisa sin llamar a la acción.
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
+  const error = errorLocal ?? (estado && !estado.ok ? estado.error : null);
   return (
-    <form action={cambiar} className={error ? "auth-form shake" : "auth-form"}>
+    <form
+      action={(fd) => {
+        if (!esPasswordFuerte(campos.password)) {
+          setErrorLocal(ERROR_PASSWORD);
+          return;
+        }
+        setErrorLocal(null);
+        cambiar(fd);
+      }}
+      className={error ? "auth-form shake" : "auth-form"}
+    >
       <div className="field">
         <label htmlFor="av-pass">Contraseña nueva</label>
         <input
@@ -25,7 +38,7 @@ export function NuevaClaveForm() {
           aria-describedby="av-pass-ayuda"
         />
         <p className="field-hint" id="av-pass-ayuda">
-          Mínimo 8 caracteres
+          Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo
         </p>
       </div>
       <div className="field">
