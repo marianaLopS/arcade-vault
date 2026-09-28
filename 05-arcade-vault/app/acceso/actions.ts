@@ -70,14 +70,19 @@ export async function registrar(_prev: AuthResult | null, formData: FormData): P
       password,
       options: { data: { username } },
     });
+    // Email ya registrado (SPEC 16): misma respuesta que un alta nueva, como
+    // `pedirRecuperacion`, para no revelar qué correos tienen cuenta. Con
+    // confirmación activa Supabase lo señala con un usuario sin identidades;
+    // los códigos de error cubren la configuración sin confirmación.
+    if (error?.code === "user_already_exists" || error?.code === "email_exists") {
+      return { ok: true, aviso: "REVISA TU CORREO" };
+    }
     if (error) {
       console.error("[registrar] signUp", error.code ?? error.message);
       return { ok: false, error: mensajeDe(error) };
     }
-    // Con confirmación activa, Supabase no da error para un email ya
-    // confirmado: devuelve un usuario sin identidades para no revelarlo.
     if (data.user && data.user.identities?.length === 0) {
-      return { ok: false, error: "ESE CORREO YA TIENE CUENTA" };
+      return { ok: true, aviso: "REVISA TU CORREO" };
     }
   } catch (e) {
     console.error("[registrar]", e);

@@ -68,11 +68,20 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
         <div className="auth-sent slide-in" role="status">
           <div className="auth-sent-env" aria-hidden />
           <p className="auth-sent-title pixel">{alta.aviso}</p>
-          <p className="auth-sent-copy">Te enviamos un enlace de confirmación a</p>
+          <p className="auth-sent-copy">
+            Si el correo es nuevo, te enviamos un enlace de confirmación a
+          </p>
           <p className="auth-sent-mail">{campos.email}</p>
           <p className="auth-sent-copy">
             Ábrelo para activar la cuenta de <strong>{campos.username.toUpperCase()}</strong>. Hasta
             entonces no podrás entrar.
+          </p>
+          {/* El registro no dice si el correo ya tenía cuenta (SPEC 16). */}
+          <p className="auth-sent-copy">
+            ¿Ya tenías cuenta?{" "}
+            <Link className="auth-forgot" href="/acceso/recuperar">
+              RECUPERA LA CONTRASEÑA
+            </Link>
           </p>
           <p className="auth-sent-wait pixel">
             ESPERANDO CONFIRMACIÓN<span className="blink">_</span>
