@@ -4,11 +4,11 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE_RECUPERACION, usuarioEnRecuperacion } from "@/app/auth/recuperacion";
 import { COOKIE_PROVEEDOR, esProveedor, type Proveedor } from "@/app/auth/proveedor";
+import { ERROR_PASSWORD, esPasswordFuerte } from "@/lib/password";
 import { createClient } from "@/lib/supabase/server";
 export type AuthResult = { ok: true; aviso?: string } | { ok: false; error: string };
 const USERNAME = /^[a-z0-9_]{3,16}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD = 8;
 const ERROR_GENERICO = "ALGO FALLÓ. INTÉNTALO DE NUEVO";
 
 /** Traduce el error de Supabase Auth al mensaje de la tabla de SPEC 14. */
@@ -21,6 +21,9 @@ function mensajeDe(error: AuthError): string {
     case "user_already_exists":
     case "email_exists":
       return "ESE CORREO YA TIENE CUENTA";
+    // El dashboard exige la misma regla que `lib/password.ts` (SPEC 15).
+    case "weak_password":
+      return ERROR_PASSWORD;
     case "over_email_send_rate_limit":
     case "over_request_rate_limit":
       return "DEMASIADOS INTENTOS. ESPERA UNOS MINUTOS";
@@ -45,8 +48,8 @@ export async function registrar(_prev: AuthResult | null, formData: FormData): P
     return { ok: false, error: "EL USUARIO: 3 A 16 LETRAS, NÚMEROS O _" };
   }
   if (!EMAIL.test(email)) return { ok: false, error: "ESE CORREO NO TIENE BUENA PINTA" };
-  if (typeof password !== "string" || password.length < MIN_PASSWORD) {
-    return { ok: false, error: `LA CONTRASEÑA NECESITA AL MENOS ${MIN_PASSWORD} CARACTERES` };
+  if (typeof password !== "string" || !esPasswordFuerte(password)) {
+    return { ok: false, error: ERROR_PASSWORD };
   }
   try {
     const supabase = await createClient();
@@ -201,8 +204,8 @@ export async function cambiarPassword(
 ): Promise<AuthResult> {
   const password = formData.get("password");
   const confirmacion = formData.get("confirmacion");
-  if (typeof password !== "string" || password.length < MIN_PASSWORD) {
-    return { ok: false, error: `LA CONTRASEÑA NECESITA AL MENOS ${MIN_PASSWORD} CARACTERES` };
+  if (typeof password !== "string" || !esPasswordFuerte(password)) {
+    return { ok: false, error: ERROR_PASSWORD };
   }
   if (password !== confirmacion) return { ok: false, error: "LAS CONTRASEÑAS NO COINCIDEN" };
   try {
