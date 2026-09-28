@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import type { Proveedor } from "@/app/auth/proveedor";
+import { AuthHeader } from "./auth-header";
 import { entrarCon, iniciarSesion, registrar, type AuthResult } from "./actions";
 type Tab = "in" | "up";
 type Campos = { username: string; email: string; password: string };
@@ -40,21 +41,7 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
   const pendiente = tab === "in" ? entrando : creando;
   return (
     <div className="auth-card">
-      <div className="auth-header">
-        <div className="mark" aria-hidden />
-        <h2 className="neon-cyan">ARCADE VAULT</h2>
-        <div
-          className="mono"
-          style={{
-            fontSize: 11,
-            color: "var(--ink-faint)",
-            letterSpacing: "0.16em",
-            marginTop: 6,
-          }}
-        >
-          ACCESO AL SISTEMA · v2.6
-        </div>
-      </div>
+      <AuthHeader />
       <div className="auth-tabs">
         <button
           type="button"

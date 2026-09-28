@@ -164,3 +164,59 @@ export async function entrarCon(proveedor: Proveedor): Promise<AuthResult> {
   }
   redirect(url);
 }
+/**
+ * Pide el correo de recuperación. Responde siempre el mismo aviso, exista o no
+ * la cuenta, para no permitir enumerar emails. El enlace pasa por
+ * `/auth/confirm?type=recovery` y acaba en `/acceso/nueva-clave`.
+ */
+export async function pedirRecuperacion(
+  _prev: AuthResult | null,
+  formData: FormData,
+): Promise<AuthResult> {
+  const email = texto(formData, "email");
+  if (!EMAIL.test(email)) return { ok: false, error: "ESE CORREO NO TIENE BUENA PINTA" };
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      console.error("[pedirRecuperacion]", error.code ?? error.message);
+      // El límite de envíos no revela si la cuenta existe: se puede decir.
+      if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
+        return { ok: false, error: mensajeDe(error) };
+      }
+    }
+  } catch (e) {
+    console.error("[pedirRecuperacion]", e);
+  }
+  return { ok: true, aviso: "SI EXISTE UNA CUENTA, TE HEMOS ENVIADO UN CORREO" };
+}
+/** Fija la nueva contraseña con la sesión que abrió el enlace de recuperación. */
+export async function cambiarPassword(
+  _prev: AuthResult | null,
+  formData: FormData,
+): Promise<AuthResult> {
+  const password = formData.get("password");
+  const confirmacion = formData.get("confirmacion");
+  if (typeof password !== "string" || password.length < MIN_PASSWORD) {
+    return { ok: false, error: `LA CONTRASEÑA NECESITA AL MENOS ${MIN_PASSWORD} CARACTERES` };
+  }
+  if (password !== confirmacion) return { ok: false, error: "LAS CONTRASEÑAS NO COINCIDEN" };
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      console.error("[cambiarPassword]", error.code ?? error.message);
+      if (error.code === "same_password") {
+        return { ok: false, error: "LA NUEVA CONTRASEÑA DEBE SER DISTINTA DE LA ANTERIOR" };
+      }
+      if (error.code === "session_not_found" || error.code === "session_expired") {
+        return { ok: false, error: "EL ENLACE HA CADUCADO" };
+      }
+      return { ok: false, error: mensajeDe(error) };
+    }
+  } catch (e) {
+    console.error("[cambiarPassword]", e);
+    return { ok: false, error: ERROR_GENERICO };
+  }
+  redirect("/biblioteca");
+}
