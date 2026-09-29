@@ -126,6 +126,15 @@ caso vacío ante un error en vez de lanzar. Los tres juegos sin fila en `games` 
 `supabase/prod/README.md` es el runbook (dashboard, OAuth, SMTP, env vars). Cada migración nueva
 se aplica en dev y la usuaria la pega a mano en prod; nunca pedir credenciales de prod.
 
+**Regla: todo cambio en la BD de dev va por migración.** Esquema, datos de catálogo (`games`),
+políticas, grants, funciones, triggers, vistas: siempre un archivo nuevo
+`supabase/migrations/<YYYYMMDDHHMMSS>_<nombre>.sql` en el repo **y** el mismo SQL aplicado con
+`apply_migration` (mismo `name`). Nunca DDL/DML persistente con `execute_sql`: ésa es sólo para
+consultas de lectura o diagnóstico. No editar migraciones ya aplicadas; si hay que corregir, otra
+migración. Si el cambio afecta al estado inicial de prod, actualizar también
+`supabase/prod/bootstrap.sql`. Comprobar con `list_migrations` que dev y `supabase/migrations/`
+tienen las mismas migraciones (los timestamps pueden diferir; los nombres, no).
+
 Tras cualquier cambio de esquema hay que regenerar los tipos:
 
 ```bash
