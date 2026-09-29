@@ -121,6 +121,11 @@ Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats
 caso vacío ante un error en vez de lanzar. Los tres juegos sin fila en `games` (`gloton`,
 `invasores`, `duelo-pixel`) siguen pintando `seededScores()` de `lib/games.ts`.
 
+**Producción**: proyecto Supabase aparte al que Claude **no** tiene acceso (el MCP es sólo dev).
+`supabase/prod/bootstrap.sql` deja un proyecto vacío igual que dev (esquema + catálogo `games`) y
+`supabase/prod/README.md` es el runbook (dashboard, OAuth, SMTP, env vars). Cada migración nueva
+se aplica en dev y la usuaria la pega a mano en prod; nunca pedir credenciales de prod.
+
 Tras cualquier cambio de esquema hay que regenerar los tipos:
 
 ```bash
