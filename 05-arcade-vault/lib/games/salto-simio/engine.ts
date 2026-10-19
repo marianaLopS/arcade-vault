@@ -251,10 +251,13 @@ export function createSaltoSimioGame(
   }
   function updateAir(dt: number, dir: number) {
     hero.vx += (dir * RUN_SPEED - hero.vx) * JUMP_AIR_CONTROL;
+    // Velocidad media del paso: exacta con gravedad constante, así el salto
+    // alcanza los ≈ 87 px de la spec sea cual sea el dt.
+    const vy0 = hero.vy;
     hero.vy += GRAVITY * dt;
     const prevY = hero.y;
     hero.x = clampX(hero.x + hero.vx * dt);
-    hero.y += hero.vy * dt;
+    hero.y += ((vy0 + hero.vy) / 2) * dt;
     hero.peakY = Math.min(hero.peakY, hero.y);
     if (hero.vy <= 0) return;
     // Vigas de una vía: sólo se aterriza cruzando la superficie desde arriba.
