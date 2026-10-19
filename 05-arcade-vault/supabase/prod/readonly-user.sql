@@ -28,7 +28,19 @@ alter default privileges for role postgres in schema public
 create user claude_ro with password 'CAMBIA_ESTA_CLAVE_LARGA' bypassrls inherit
   nocreatedb nocreaterole;
 grant solo_lectura to claude_ro;
+-- Ojo: default_transaction_read_only NO es una barrera (el usuario puede hacer "set transaction read write").
+-- La barrera real son los privilegios: sólo select en tablas y sin create en el esquema. Se deja como red.
 alter role claude_ro set default_transaction_read_only = on;
+-- create en public llega por PUBLIC en Postgres < 15; revocarlo explícitamente (no-op si ya no lo tiene).
+revoke create on schema public from public;
 alter role claude_ro set statement_timeout = '15s';
 alter role claude_ro set idle_in_transaction_session_timeout = '60s';
 alter role claude_ro connection limit 3;
+
+-- Verificación (todas deben devolver 0 filas / false):
+--   select table_name, privilege_type from information_schema.role_table_grants
+--     where grantee in ('claude_ro', 'solo_lectura', 'PUBLIC') and table_schema = 'public'
+--       and privilege_type <> 'SELECT';
+--   select has_schema_privilege('claude_ro', 'public', 'create');
+--   select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--     where n.nspname = 'public' and has_function_privilege('claude_ro', p.oid, 'execute');
