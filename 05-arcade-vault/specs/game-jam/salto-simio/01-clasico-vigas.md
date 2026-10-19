@@ -1,6 +1,6 @@
 # SPEC — SALTO SIMIO: variante clásica de vigas
 
-> **Estado:** Propuesta (game jam)
+> **Estado:** aprobado
 > **Depende de:** SPEC 05, SPEC 06
 > **Fecha:** 2026-10-09
 > **Objetivo:** Diseñar `salto-simio` como el plataformas vertical clásico de una sola pantalla: escalar cinco vigas inclinadas esquivando barriles que ruedan, llegar a la cima y repetir con dificultad creciente, con tres vidas y un bono de tiempo.
