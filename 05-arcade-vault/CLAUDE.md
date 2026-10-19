@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Arcade Vault: plataforma web para jugar juegos arcade online y competir por puntuación.
-Estado actual: 5 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
-**ARKANOID**, **SNAKE** y **FROGGER** (id `frogger`, nacido de la game-jam `ranaria`) — cada
+Estado actual: 6 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
+**ARKANOID**, **SNAKE**, **FROGGER** (id `frogger`, nacido de la game-jam `ranaria`) y
+**SALTO SIMIO** (id `salto-simio`, game-jam `salto-simio`, SPEC 17) — cada
 uno con leaderboard real en Supabase. El resto del catálogo (`gloton`, `invasores`,
 `duelo-pixel`) sigue en modo maqueta, pintando `seededScores()` de `lib/games.ts` en vez de
 datos reales.
@@ -98,12 +99,12 @@ si falta una de estas `lib/supabase/env.ts` lanza `FALTA <NOMBRE> EN .env.local`
 El esquema `public` ya no está vacío. Migraciones versionadas en `supabase/migrations/`,
 aplicadas con `apply_migration` del MCP de Supabase.
 
-| Objeto       | Qué es                                                                                                                                                                                                                                                                                                              |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 5 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake`, `frogger`. Detalle en `References/resources/resources/implemented-games.md`. |
-| `scores`     | Puntuaciones: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000), `user_id` (FK a `auth.users`, `null` = invitado; SPEC 15). Enseñarlas por cuenta es la spec siguiente.                                                                                                                   |
-| `profiles`   | 1:1 con `auth.users` (SPEC 14): `username` único `^[a-z0-9_]{3,16}$`, siempre en minúsculas (la UI lo pinta en mayúsculas). Lo crea el trigger `on_auth_user_created` (`handle_new_user()`, `security definer`) con sufijo numérico si choca. `select` público, sin políticas de escritura.                         |
-| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                     |
+| Objeto       | Qué es                                                                                                                                                                                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`      | Juegos **jugables**, no el catálogo de la maqueta. `id` textual = el slug (`asteroids`), que es también el segmento de URL y la clave de `GAME_ENGINES`. Hoy tiene 6 filas: `asteroids`, `caida` (título TETRIS), `arkanoid`, `snake`, `frogger`, `salto-simio`. Detalle en `References/resources/resources/implemented-games.md`. |
+| `scores`     | Puntuaciones: `game_id` (FK a `games`), `player` (`^[A-Z]{1,3}$`), `score` (0..1.000.000), `user_id` (FK a `auth.users`, `null` = invitado; SPEC 15). Enseñarlas por cuenta es la spec siguiente.                                                                                                                                  |
+| `profiles`   | 1:1 con `auth.users` (SPEC 14): `username` único `^[a-z0-9_]{3,16}$`, siempre en minúsculas (la UI lo pinta en mayúsculas). Lo crea el trigger `on_auth_user_created` (`handle_new_user()`, `security definer`) con sufijo numérico si choca. `select` público, sin políticas de escritura.                                        |
+| `game_stats` | Vista (`security_invoker`) con `best` y `plays` por juego, derivados de `scores`. Un juego sin puntuaciones no aparece en ella.                                                                                                                                                                                                    |
 
 RLS activa en `games`, `scores` y `profiles`: `select` público; `insert` en `scores` sólo con
 `user_id is null or user_id = auth.uid()` (nadie firma por otra cuenta); **ninguna** política de
@@ -181,10 +182,10 @@ vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proces
 agregue un juego.
 
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
-`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 15 specs en
-`specs/01-...` a `specs/15-seguridad-basica.md`; seguir el mismo patrón de numeración al
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 17 specs en
+`specs/01-...` a `specs/17-juego-salto-simio.md`; seguir el mismo patrón de numeración al
 agregar una nueva. Las propuestas de juego de la game-jam van aparte en
-`specs/game-jam/<id>/` (hoy `ranaria/`).
+`specs/game-jam/<id>/` (promovidas: `ranaria/` → FROGGER, `salto-simio/` → SPEC 17).
 
 `/spec-impl-game` (skill propia en `.agents/skills/spec-impl-game/`, symlink en
 `.claude/skills/`): para specs de **juegos**. Sigue las Fases 1–4 de `/spec-impl` leyendo su

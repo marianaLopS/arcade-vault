@@ -1,6 +1,6 @@
 # SPEC — SALTO SIMIO: variante clásica de vigas
 
-> **Estado:** aprobado
+> **Estado:** Implementado (pasos 1–4; 5–7 en SPEC 17)
 > **Depende de:** SPEC 05, SPEC 06
 > **Fecha:** 2026-10-09
 > **Objetivo:** Diseñar `salto-simio` como el plataformas vertical clásico de una sola pantalla: escalar cinco vigas inclinadas esquivando barriles que ruedan, llegar a la cima y repetir con dificultad creciente, con tres vidas y un bono de tiempo.
@@ -72,7 +72,8 @@ Tipos locales del motor, sin exportar:
 type Girder = { x0: number; x1: number; y0: number; y1: number }; // y0 en x0, y1 en x1 (superficie)
 type Ladder = { x: number; lower: number; upper: number }; // índices de Girder que conecta
 type Barrel = {
-  x: number; y: number; // centro
+  x: number;
+  y: number; // centro
   dir: 1 | -1;
   girder: number; // índice de viga sobre la que rueda; -1 si cae
   vy: number;
@@ -312,16 +313,16 @@ los criterios de aceptación. Esta spec no ejecuta este paso: es trabajo de `/sp
 
 ## Riesgos
 
-| Riesgo | Mitigación |
-| ------ | ---------- |
+| Riesgo                                                                                 | Mitigación                                                                                                                                               |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | El héroe atraviesa una viga si `dt` es grande (pestaña en segundo plano, hitch de GC). | `dt` capado a 50 ms: a `vy` máxima (~900 px/s) son 45 px por frame, menos que el hueco que permite el barrido de una vía; `lastTime = null` al reanudar. |
-| Al caminar por una viga inclinada el héroe «flota» o se hunde en los extremos. | `y` se recalcula con `surface(girder, x)` cada frame; no se integra gravedad en `ground`. |
-| La escalera comparte `x` con el borde de una viga y el héroe cae en vez de subir. | Todas las escaleras de la tabla están al menos 40 px dentro de ambas vigas; el agarre usa tolerancia ±10 px. |
-| El salto sobre barril puntúa varias veces o no puntúa al ir muy rápido. | Marca `jumped` por barril y comprobación por frame con ventana de ±14 px, más ancha que el avance por frame del barril (≈ 2 px). |
-| Barriles que se acumulan en G0 y bloquean la partida a niveles altos. | `BARREL_MAX 14` y eliminación en el barril de aceite; si se alcanza el máximo, no nacen más. |
-| El bono de 5000 es demasiado corto/largo para la pantalla y obliga a correr. | Son 100 s de margen frente a un recorrido de ≈ 25 s; se ajusta solo en verificación y se anota. |
-| Espacio llega al motor mientras se escriben iniciales en el modal. | Bucle parado con el modal abierto y listeners en el canvas, no en `window`. |
-| El héroe queda pegado en `ladder` si pierde el foco con una tecla pulsada. | `blur` suelta las teclas; el estado `ladder` solo avanza con `up`/`down` pulsados. |
+| Al caminar por una viga inclinada el héroe «flota» o se hunde en los extremos.         | `y` se recalcula con `surface(girder, x)` cada frame; no se integra gravedad en `ground`.                                                                |
+| La escalera comparte `x` con el borde de una viga y el héroe cae en vez de subir.      | Todas las escaleras de la tabla están al menos 40 px dentro de ambas vigas; el agarre usa tolerancia ±10 px.                                             |
+| El salto sobre barril puntúa varias veces o no puntúa al ir muy rápido.                | Marca `jumped` por barril y comprobación por frame con ventana de ±14 px, más ancha que el avance por frame del barril (≈ 2 px).                         |
+| Barriles que se acumulan en G0 y bloquean la partida a niveles altos.                  | `BARREL_MAX 14` y eliminación en el barril de aceite; si se alcanza el máximo, no nacen más.                                                             |
+| El bono de 5000 es demasiado corto/largo para la pantalla y obliga a correr.           | Son 100 s de margen frente a un recorrido de ≈ 25 s; se ajusta solo en verificación y se anota.                                                          |
+| Espacio llega al motor mientras se escriben iniciales en el modal.                     | Bucle parado con el modal abierto y listeners en el canvas, no en `window`.                                                                              |
+| El héroe queda pegado en `ladder` si pierde el foco con una tecla pulsada.             | `blur` suelta las teclas; el estado `ladder` solo avanza con `up`/`down` pulsados.                                                                       |
 
 ---
 

@@ -1,6 +1,6 @@
 # SPEC 17 — Juego SALTO SIMIO: promoción al catálogo y leaderboard
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 05, SPEC 06, SPEC 11, SPEC 13, `specs/game-jam/salto-simio/01-clasico-vigas.md`
 > **Fecha:** 2026-10-19
 > **Objetivo:** Hacer jugable `salto-simio` en Arcade Vault conectando el motor ya escrito al registro, al catálogo con una portada propia y a la tabla `games` para que tenga leaderboard real.
