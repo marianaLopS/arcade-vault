@@ -78,6 +78,28 @@ const DT_MAX = 50; // ms
 const SCORE_CAP = 999999; // CHECK de scores: 0..1.000.000
 const POINTS_JUMP = 100;
 const POINTS_GOAL = 1000; // + bono restante íntegro
+// ── Dibujo ──
+const BONUS_BAR_H = 20; // franja superior
+const GIRDER_THICK = 16;
+const LADDER_RUNG = 12; // px entre peldaños
+const OIL_H = 36;
+const SIMIO_H = 64;
+const GOAL_H = 28;
+const GOAL_INSET = 10;
+const FACE_W = 6;
+const COLOR_BG = "#000000";
+const COLOR_GIRDER = "#ff2bd6"; // magenta neón
+const COLOR_LADDER = "#00c8d8"; // cian
+const COLOR_OIL = "#2f5cff";
+const COLOR_SIMIO = "#a0522d";
+const COLOR_GOAL = "#ffffff";
+const COLOR_BARREL = "#ffd400";
+const COLOR_BARREL_STRIPE = "#7a4a00";
+const COLOR_HERO = "#5ff7ff";
+const COLOR_HERO_DEAD = "#ff4040";
+const COLOR_HERO_FACE = "#003040";
+const COLOR_BONUS = "#ffd400";
+const COLOR_BONUS_BG = "#2a2a2a";
 function surface(g: Girder, x: number): number {
   return g.y0 + ((g.y1 - g.y0) * (x - g.x0)) / (g.x1 - g.x0);
 }
@@ -416,13 +438,225 @@ export function createSaltoSimioGame(
     if (frozen()) return;
     updateBonus(dt);
   }
+  // ── Avisos al HUD: sólo cuando el valor cambia ──
+  let lastScore = -1;
+  let lastLives = -1;
+  let lastLevel = -1;
+  function emit() {
+    if (score !== lastScore) {
+      lastScore = score;
+      callbacks.onScore(score);
+    }
+    if (lives !== lastLives) {
+      lastLives = lives;
+      callbacks.onLives(lives);
+    }
+    if (level !== lastLevel) {
+      lastLevel = level;
+      callbacks.onLevel(level);
+    }
+  }
+  // ── Dibujo: colores planos, sin asignaciones por frame (SPEC 13) ──
+  /** ms de juego acumulados; sólo para parpadeos. */
+  let clock = 0;
+  function blink(periodMs: number): boolean {
+    return Math.floor(clock / periodMs) % 2 === 0;
+  }
+  function drawBonusBar() {
+    ctx.fillStyle = COLOR_BONUS_BG;
+    ctx.fillRect(0, 0, W, BONUS_BAR_H);
+    ctx.fillStyle = COLOR_BONUS;
+    ctx.fillRect(0, 0, (W * bonus) / BONUS_START, BONUS_BAR_H);
+  }
+  function drawLadders() {
+    ctx.strokeStyle = COLOR_LADDER;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i < LADDERS.length; i++) {
+      const l = LADDERS[i];
+      const top = surface(GIRDERS[l.upper], l.x);
+      const bottom = surface(GIRDERS[l.lower], l.x);
+      const left = l.x - LADDER_W / 2;
+      const right = l.x + LADDER_W / 2;
+      ctx.moveTo(left, top);
+      ctx.lineTo(left, bottom);
+      ctx.moveTo(right, top);
+      ctx.lineTo(right, bottom);
+      for (let y = top + LADDER_RUNG; y < bottom; y += LADDER_RUNG) {
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+      }
+    }
+    ctx.stroke();
+  }
+  function drawGirders() {
+    ctx.fillStyle = COLOR_GIRDER;
+    ctx.beginPath();
+    for (let i = 0; i < GIRDERS.length; i++) {
+      const g = GIRDERS[i];
+      ctx.moveTo(g.x0, g.y0);
+      ctx.lineTo(g.x1, g.y1);
+      ctx.lineTo(g.x1, g.y1 + GIRDER_THICK);
+      ctx.lineTo(g.x0, g.y0 + GIRDER_THICK);
+      ctx.closePath();
+    }
+    ctx.fill();
+  }
+  function drawProps() {
+    const floor = GIRDERS[0].y0;
+    const top = GIRDERS[TOP].y0;
+    ctx.fillStyle = COLOR_OIL;
+    ctx.fillRect(OIL_DRUM.x0, floor - OIL_H, OIL_DRUM.x1 - OIL_DRUM.x0, OIL_H);
+    ctx.fillStyle = COLOR_SIMIO;
+    ctx.fillRect(SIMIO.x0, top - SIMIO_H, SIMIO.x1 - SIMIO.x0, SIMIO_H);
+    // Rescate: parpadea siempre; rápido mientras se celebra la victoria.
+    if (blink(heroState === "won" ? 100 : 400)) {
+      ctx.fillStyle = COLOR_GOAL;
+      ctx.fillRect(GOAL.x0 + GOAL_INSET, top - GOAL_H, GOAL.x1 - GOAL.x0 - 2 * GOAL_INSET, GOAL_H);
+    }
+  }
+  function drawBarrels() {
+    ctx.fillStyle = COLOR_BARREL;
+    ctx.beginPath();
+    for (let i = 0; i < barrels.length; i++) {
+      const b = barrels[i];
+      ctx.moveTo(b.x + BARREL_R, b.y);
+      ctx.arc(b.x, b.y, BARREL_R, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    // Raya que gira con lo rodado: ángulo = arco recorrido / radio.
+    ctx.strokeStyle = COLOR_BARREL_STRIPE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < barrels.length; i++) {
+      const b = barrels[i];
+      const a = b.x / BARREL_R;
+      const dx = Math.cos(a) * (BARREL_R - 2);
+      const dy = Math.sin(a) * (BARREL_R - 2);
+      ctx.moveTo(b.x - dx, b.y - dy);
+      ctx.lineTo(b.x + dx, b.y + dy);
+    }
+    ctx.stroke();
+  }
+  function drawHero() {
+    if (heroState === "dying" && !blink(100)) return;
+    const left = hero.x - HERO_W / 2;
+    const top = hero.y - HERO_H;
+    ctx.fillStyle = heroState === "dying" ? COLOR_HERO_DEAD : COLOR_HERO;
+    ctx.fillRect(left, top, HERO_W, HERO_H);
+    // Marcador de la cara: hacia donde mira.
+    ctx.fillStyle = COLOR_HERO_FACE;
+    const fx = hero.face === 1 ? left + HERO_W - FACE_W - 2 : left + 2;
+    ctx.fillRect(fx, top + 6, FACE_W, FACE_W);
+  }
+  function draw() {
+    ctx.fillStyle = COLOR_BG;
+    ctx.fillRect(0, 0, W, H);
+    drawLadders();
+    drawGirders();
+    drawProps();
+    drawBarrels();
+    drawHero();
+    drawBonusBar();
+  }
+  // ── Bucle ──
+  let rafId: number | null = null;
+  let lastTime: number | null = null;
+  let destroyed = false;
+  let gameOverSent = false;
+  function loop(ts: number) {
+    rafId = null;
+    if (destroyed) return;
+    // dt capado: volver de segundo plano no atraviesa vigas ni adelanta barriles.
+    const dt = lastTime === null ? 0 : Math.min(ts - lastTime, DT_MAX);
+    lastTime = ts;
+    clock += dt;
+    update(dt);
+    draw();
+    emit();
+    if (state === "gameover") {
+      stopLoop();
+      if (!gameOverSent) {
+        gameOverSent = true;
+        callbacks.onGameOver(score);
+      }
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+  function stopLoop() {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  function startLoop() {
+    // `state === "gameover"` convierte en no-op un resume() tras el fin de partida.
+    if (destroyed || rafId !== null || state === "gameover") return;
+    // Sin esto, el primer dt tras una pausa valdría toda la pausa.
+    lastTime = null;
+    rafId = requestAnimationFrame(loop);
+  }
+  // ── Entrada: listeners en el canvas, nunca en window ──
+  // `KeyP` y `Escape` no están: la pausa la atiende components/game-canvas.tsx.
+  const GAME_KEYS: Record<string, "left" | "right" | "up" | "down" | "jump"> = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    KeyW: "up",
+    KeyS: "down",
+    KeyA: "left",
+    KeyD: "right",
+    Space: "jump",
+  };
+  function onKeyDown(e: KeyboardEvent) {
+    const k = GAME_KEYS[e.code];
+    if (!k) return;
+    // Con el canvas enfocado, flechas y Espacio no hacen scroll.
+    e.preventDefault();
+    if (k !== "jump") keys[k] = true;
+    // Bucle parado (pausa, fin de partida o antes de start()): el salto no se encola.
+    else if (!e.repeat && rafId !== null && state === "playing") jumpQueued = true;
+  }
+  function onKeyUp(e: KeyboardEvent) {
+    const k = GAME_KEYS[e.code];
+    if (!k) return;
+    e.preventDefault();
+    if (k !== "jump") keys[k] = false;
+  }
+  canvas.addEventListener("keydown", onKeyDown);
+  canvas.addEventListener("keyup", onKeyUp);
+  canvas.addEventListener("blur", releaseKeys);
   initGame();
-  // Paso 4 de la spec: bucle, entrada y dibujo.
+  draw();
   return {
-    start: () => {},
-    pause: () => {},
-    resume: () => {},
-    restart: () => {},
-    destroy: () => {},
+    start: () => {
+      if (destroyed) return;
+      emit();
+      startLoop();
+    },
+    pause: stopLoop,
+    resume: startLoop,
+    restart: () => {
+      if (destroyed) return;
+      stopLoop();
+      initGame();
+      gameOverSent = false;
+      clock = 0;
+      // El reproductor repone su HUD al reiniciar: se vuelve a avisar de todo.
+      lastScore = -1;
+      lastLives = -1;
+      lastLevel = -1;
+      emit();
+      draw();
+      startLoop();
+    },
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      stopLoop();
+      canvas.removeEventListener("keydown", onKeyDown);
+      canvas.removeEventListener("keyup", onKeyUp);
+      canvas.removeEventListener("blur", releaseKeys);
+    },
   };
 }
