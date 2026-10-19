@@ -155,8 +155,165 @@ export function createSaltoSimioGame(
     state = "playing";
     resetStage();
   }
+  function addScore(points: number) {
+    score = Math.min(SCORE_CAP, score + points);
+  }
+  // ── Héroe ──
+  function die() {
+    if (heroState === "dying" || heroState === "won") return;
+    heroState = "dying";
+    stateTime = 0;
+  }
+  /** Escalera cuya viga inferior es la actual, a ≤ LADDER_GRAB del héroe. */
+  function ladderUp(): Ladder | null {
+    for (let i = 0; i < LADDERS.length; i++) {
+      const l = LADDERS[i];
+      if (l.lower === hero.girder && Math.abs(hero.x - l.x) < LADDER_GRAB) return l;
+    }
+    return null;
+  }
+  /** Escalera cuyo extremo superior pisa el héroe (pies a ≤ 4 px de la viga superior). */
+  function ladderDown(): Ladder | null {
+    for (let i = 0; i < LADDERS.length; i++) {
+      const l = LADDERS[i];
+      if (
+        l.upper === hero.girder &&
+        Math.abs(hero.x - l.x) < LADDER_GRAB &&
+        Math.abs(hero.y - surface(GIRDERS[l.upper], l.x)) <= 4
+      )
+        return l;
+    }
+    return null;
+  }
+  function clampX(x: number): number {
+    return Math.min(W - HERO_W / 2, Math.max(HERO_W / 2, x));
+  }
+  function updateGround(dt: number, dir: number, jump: boolean) {
+    if (jump) {
+      hero.vy = JUMP_VY;
+      hero.vx = dir * RUN_SPEED;
+      hero.peakY = hero.y;
+      heroState = "air";
+      return;
+    }
+    if (keys.up && !keys.down) {
+      const l = ladderUp();
+      if (l) {
+        hero.ladder = l;
+        hero.x = l.x;
+        heroState = "ladder";
+        return;
+      }
+    }
+    if (keys.down && !keys.up) {
+      const l = ladderDown();
+      if (l) {
+        hero.ladder = l;
+        hero.x = l.x;
+        heroState = "ladder";
+        return;
+      }
+    }
+    const g = GIRDERS[hero.girder];
+    hero.x = clampX(hero.x + dir * RUN_SPEED * dt);
+    // Fuera del rango de su viga: cae por el borde, con la inercia de la carrera.
+    if (hero.x < g.x0 || hero.x > g.x1) {
+      hero.vy = 0;
+      hero.vx = dir * RUN_SPEED;
+      hero.peakY = hero.y;
+      heroState = "air";
+      return;
+    }
+    // Sin gravedad en el suelo: los pies siguen la pendiente exacta.
+    hero.y = surface(g, hero.x);
+  }
+  function updateAir(dt: number, dir: number) {
+    hero.vx += (dir * RUN_SPEED - hero.vx) * JUMP_AIR_CONTROL;
+    hero.vy += GRAVITY * dt;
+    const prevY = hero.y;
+    hero.x = clampX(hero.x + hero.vx * dt);
+    hero.y += hero.vy * dt;
+    hero.peakY = Math.min(hero.peakY, hero.y);
+    if (hero.vy <= 0) return;
+    // Vigas de una vía: sólo se aterriza cruzando la superficie desde arriba.
+    for (let i = 0; i < GIRDERS.length; i++) {
+      const g = GIRDERS[i];
+      if (hero.x < g.x0 || hero.x > g.x1) continue;
+      const s = surface(g, hero.x);
+      if (prevY > s + 1 || hero.y < s) continue;
+      hero.y = s;
+      if (hero.y - hero.peakY > FALL_DEATH) {
+        die();
+        return;
+      }
+      hero.girder = i;
+      hero.vx = 0;
+      hero.vy = 0;
+      heroState = "ground";
+      return;
+    }
+  }
+  function updateLadder(dt: number) {
+    const l = hero.ladder;
+    if (!l) return;
+    const climb = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+    hero.y -= climb * CLIMB_SPEED * dt;
+    // Cada extremo sólo se comprueba en el sentido de la marcha: al bajar
+    // desde arriba los pies empiezan justo sobre la viga superior.
+    const top = surface(GIRDERS[l.upper], l.x);
+    const bottom = surface(GIRDERS[l.lower], l.x);
+    if (climb > 0 && hero.y <= top) {
+      hero.y = top;
+      hero.girder = l.upper;
+    } else if (climb < 0 && hero.y >= bottom) {
+      hero.y = bottom;
+      hero.girder = l.lower;
+    } else return;
+    hero.ladder = null;
+    heroState = "ground";
+  }
+  function reachedGoal(): boolean {
+    return (
+      heroState === "ground" &&
+      hero.girder === TOP &&
+      hero.x + HERO_W / 2 > GOAL.x0 &&
+      hero.x - HERO_W / 2 < GOAL.x1
+    );
+  }
+  /** `dt` en ms. */
+  function updateHero(dt: number) {
+    const s = dt / 1000;
+    if (heroState === "dying") {
+      stateTime += dt;
+      if (stateTime < DYING_MS) return;
+      lives--;
+      if (lives <= 0) state = "gameover";
+      else resetStage();
+      return;
+    }
+    if (heroState === "won") {
+      stateTime += dt;
+      if (stateTime < WON_MS) return;
+      addScore(POINTS_GOAL + bonus);
+      level++;
+      resetStage();
+      return;
+    }
+    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (dir !== 0 && heroState !== "ladder") hero.face = dir > 0 ? 1 : -1;
+    // Se consume siempre: un Espacio pulsado en el aire no se guarda.
+    const jump = jumpQueued;
+    jumpQueued = false;
+    if (heroState === "ground") updateGround(s, dir, jump);
+    else if (heroState === "air") updateAir(s, dir);
+    else if (heroState === "ladder") updateLadder(s);
+    if (reachedGoal()) {
+      heroState = "won";
+      stateTime = 0;
+    }
+  }
   initGame();
-  // Pasos 2–4 de la spec: héroe, barriles, bucle, entrada y dibujo.
+  // Pasos 3–4 de la spec: barriles, bucle, entrada y dibujo.
   return {
     start: () => {},
     pause: () => {},
