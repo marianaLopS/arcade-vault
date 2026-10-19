@@ -312,8 +312,112 @@ export function createSaltoSimioGame(
       stateTime = 0;
     }
   }
+  // ── Barriles ──
+  function spawnBarrel() {
+    if (barrels.length >= BARREL_MAX) return;
+    barrels.push({
+      x: BARREL_SPAWN_X,
+      y: surface(GIRDERS[TOP], BARREL_SPAWN_X) - BARREL_R,
+      dir: 1,
+      girder: TOP,
+      vy: 0,
+      jumped: false,
+    });
+  }
+  /** Avanza un barril; devuelve `false` si hay que quitarlo (barril de aceite). */
+  function moveBarrel(b: Barrel, s: number, speed: number): boolean {
+    if (b.girder >= 0) {
+      const g = GIRDERS[b.girder];
+      b.x += b.dir * speed * s;
+      if (b.girder === 0 && b.x < OIL_DRUM.x1) return false;
+      if ((b.dir === 1 && b.x > g.x1) || (b.dir === -1 && b.x < g.x0)) {
+        b.girder = -1;
+        b.vy = 0;
+        return true;
+      }
+      b.y = surface(g, b.x) - BARREL_R;
+      return true;
+    }
+    b.vy += BARREL_GRAVITY * s;
+    const prevBottom = b.y + BARREL_R;
+    b.x += b.dir * BARREL_FALL_VX * s;
+    b.y += b.vy * s;
+    // Mismo barrido de una vía que el héroe: la primera viga cruzada desde
+    // arriba es la inmediatamente inferior. Al aterrizar invierte el sentido.
+    for (let i = 0; i < GIRDERS.length; i++) {
+      const g = GIRDERS[i];
+      if (b.x < g.x0 || b.x > g.x1) continue;
+      const sy = surface(g, b.x);
+      if (prevBottom > sy + 1 || b.y + BARREL_R < sy) continue;
+      b.girder = i;
+      b.y = sy - BARREL_R;
+      b.vy = 0;
+      b.dir = b.dir === 1 ? -1 : 1;
+      break;
+    }
+    return true;
+  }
+  /** Círculo del barril contra el rectángulo HERO_W × HERO_H (pies en `hero.y`). */
+  function hitsHero(b: Barrel): boolean {
+    const cx = Math.min(hero.x + HERO_W / 2, Math.max(hero.x - HERO_W / 2, b.x));
+    const cy = Math.min(hero.y, Math.max(hero.y - HERO_H, b.y));
+    const dx = b.x - cx;
+    const dy = b.y - cy;
+    return dx * dx + dy * dy <= BARREL_R * BARREL_R;
+  }
+  /** `dt` en ms. */
+  function updateBarrels(dt: number) {
+    const s = dt / 1000;
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnTimer += spawnInterval(level);
+      spawnBarrel();
+    }
+    const speed = barrelSpeed(level);
+    // Compactación in situ: sin arrays nuevos por frame.
+    let n = 0;
+    for (let i = 0; i < barrels.length; i++) {
+      const b = barrels[i];
+      if (!moveBarrel(b, s, speed)) continue;
+      barrels[n++] = b;
+      if (hitsHero(b)) die();
+      else if (
+        heroState === "air" &&
+        !b.jumped &&
+        Math.abs(b.x - hero.x) <= 14 &&
+        hero.y <= b.y - BARREL_R
+      ) {
+        b.jumped = true;
+        addScore(POINTS_JUMP);
+      }
+    }
+    barrels.length = n;
+  }
+  // ── Bono ──
+  function updateBonus(dt: number) {
+    bonusAccum += dt;
+    while (bonusAccum >= BONUS_TICK_MS) {
+      bonusAccum -= BONUS_TICK_MS;
+      bonus = Math.max(0, bonus - BONUS_TICK);
+    }
+    if (bonus === 0) die();
+  }
+  /** Función y no comparación en línea: `die()` cambia `heroState` a mitad de `update`. */
+  function frozen(): boolean {
+    return heroState === "dying" || heroState === "won";
+  }
+  /** Un único paso de física por frame; `dt` en ms, ya capado. */
+  function update(dt: number) {
+    if (state !== "playing") return;
+    updateHero(dt);
+    // Muerte y victoria congelan barriles y bono.
+    if (frozen()) return;
+    updateBarrels(dt);
+    if (frozen()) return;
+    updateBonus(dt);
+  }
   initGame();
-  // Pasos 3–4 de la spec: barriles, bucle, entrada y dibujo.
+  // Paso 4 de la spec: bucle, entrada y dibujo.
   return {
     start: () => {},
     pause: () => {},
