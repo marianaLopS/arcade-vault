@@ -16,7 +16,11 @@ grant select on all tables in schema public to solo_lectura;
 grant select on all sequences in schema public to solo_lectura;
 alter default privileges for role postgres in schema public
   grant select on tables to solo_lectura;
-revoke execute on all functions in schema public from solo_lectura;
+-- EXECUTE en funciones llega por PUBLIC, no por solo_lectura: revocarlo de PUBLIC (actuales y futuras).
+-- anon/authenticated/service_role conservan sus grants directos (default privileges de Supabase).
+revoke execute on all functions in schema public from public;
+alter default privileges for role postgres in schema public
+  revoke execute on functions from public;
 
 -- Usuario que se conecta, con su propia contraseña.
 -- bypassrls: las políticas select son sólo "to anon, authenticated"; sin él vería 0 filas.
