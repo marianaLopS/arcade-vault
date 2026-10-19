@@ -8,6 +8,7 @@ import { createArkanoidGame } from "@/lib/games/arkanoid/engine";
 import { createAsteroidsGame } from "@/lib/games/asteroids/engine";
 import { createCaidaGame } from "@/lib/games/caida/engine";
 import { createFroggerGame } from "@/lib/games/frogger/engine";
+import { createSaltoSimioGame } from "@/lib/games/salto-simio/engine";
 import { createSnakeGame } from "@/lib/games/snake/engine";
 /** Un botón de acción del mando táctil: la tecla que imita y su rótulo. */
 export type TouchButton = { code: string; label: string };
@@ -84,6 +85,13 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     controls: "flechas o WASD para saltar una casilla",
     skins: true,
     touch: {},
+  },
+  "salto-simio": {
+    create: createSaltoSimioGame,
+    width: 800,
+    height: 600,
+    controls: "flechas o WASD para moverte y trepar, espacio para saltar",
+    touch: { a: { code: "Space", label: "SALTO" } },
   },
 };
 export function getEngine(id: string): GameEngineEntry | undefined {

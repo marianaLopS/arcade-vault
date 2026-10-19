@@ -100,6 +100,17 @@ export const GAMES: Game[] = [
     plays: "6.4K",
   },
   {
+    id: "salto-simio",
+    title: "SALTO SIMIO",
+    short: "Trepa las vigas esquivando barriles.",
+    long: "Un simio furioso lanza barriles desde lo alto de una torre de vigas inclinadas. Corre, salta sobre ellos y sube por las escaleras hasta la cima antes de que se agote el bono. Cada rescate acelera los barriles; tres vidas y ni un salto en falso.",
+    cat: "ARCADE",
+    cover: "cover-simio",
+    color: "magenta",
+    best: 0,
+    plays: "0",
+  },
+  {
     id: "duelo-pixel",
     title: "DUELO PIXEL",
     short: "Dos paletas. Una pelota. Reflejos máximos.",
