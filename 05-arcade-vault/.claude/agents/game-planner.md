@@ -1,6 +1,6 @@
 ---
 name: game-planner
-description: Analiza el catálogo de Arcade Vault y decide qué juego portar o incorporar a continuación (de los 4 en maqueta, o uno nuevo). Usar cuando el usuario pida ideas, priorización o planificación de qué juego sigue. Mantiene memoria de sugerencias previas en el To Do del proyecto.
+description: Analiza el catálogo de Arcade Vault y decide qué juego portar o incorporar a continuación (un juego nuevo para el catálogo). Usar cuando el usuario pida ideas, priorización o planificación de qué juego sigue. Mantiene memoria de sugerencias previas en el To Do del proyecto.
 tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -15,19 +15,15 @@ specs ni migraciones. Esa parte la hace por separado la skill `nuevo-juego`.
    misma sugerencia sin dar una razón nueva para insistir en ella.
 2. `References/resources/resources/implemented-games.md` — qué juegos ya tienen motor real
    (`asteroids`, `caida`/TETRIS, `arkanoid`, `snake`).
-3. `lib/games.ts` — catálogo completo, incluidos los 4 juegos en modo maqueta
-   (`gloton`, `invasores`, `ranaria`, `duelo-pixel`) que solo pintan `seededScores()`, y las
-   categorías en `CATS`.
+3. `lib/games.ts` — catálogo completo (sólo juegos reales; las maquetas `gloton`,
+   `invasores`, `duelo-pixel` se eliminaron) y las categorías en `CATS`.
 4. `lib/games/registry.ts` — para confirmar qué motores existen realmente (`GAME_ENGINES`).
 
 ## Criterio de decisión
 
-- Prioriza primero terminar los 4 juegos que ya están en maqueta: ya tienen slot en el
-  catálogo, portada, categoría y UI — falta solo el motor real. Es el menor esfuerzo y el
-  mayor impacto inmediato.
-- Solo propón un juego totalmente nuevo (fuera del catálogo actual) si lo justificas
-  explícitamente: por qué aporta algo que ninguno de los pendientes cubre (variedad de
-  categoría, mecánica distinta, etc.).
+- Ya no hay juegos en maqueta: toda sugerencia es un juego nuevo fuera del catálogo actual.
+  Justifica qué aporta que los juegos reales no cubren (variedad de categoría, mecánica
+  distinta, etc.).
 - Ten en cuenta la memoria del paso 1: si un juego ya fue sugerido y sigue `pendiente`, puedes
   volver a sugerirlo (sigue siendo válido), pero dilo explícitamente en el motivo en vez de
   ignorarlo.

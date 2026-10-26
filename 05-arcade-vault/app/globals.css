@@ -750,50 +750,6 @@ body {
       calc(50% - 12px) / 12px 12px no-repeat;
   filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
 }
-.cover-glot {
-  background: radial-gradient(circle at 50% 50%, #1a002a, #0a0a18);
-}
-.cover-glot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 30% 50%, var(--yellow) 0 38px, transparent 39px),
-    radial-gradient(circle at 30% 50%, transparent 0 0, transparent 28px),
-    radial-gradient(circle at 70% 50%, var(--magenta) 0 6px, transparent 7px),
-    radial-gradient(circle at 82% 50%, var(--cyan) 0 6px, transparent 7px);
-  clip-path: polygon(0 0, 30% 0, 30% 50%, 100% 30%, 100% 70%, 30% 50%, 30% 100%, 0 100%);
-  filter: drop-shadow(0 0 8px rgba(245, 255, 0, 0.5));
-}
-.cover-glot::before {
-  content: "•••";
-  position: absolute;
-  left: 55%;
-  top: 47%;
-  color: var(--cyan);
-  letter-spacing: 6px;
-  font-size: 18px;
-  text-shadow: 0 0 6px var(--cyan);
-}
-.cover-invaders {
-  background: linear-gradient(180deg, #001a3a, #0a0a18);
-}
-.cover-invaders::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 20% 30%, var(--green) 0 5px, transparent 6px),
-    radial-gradient(circle at 40% 30%, var(--green) 0 5px, transparent 6px),
-    radial-gradient(circle at 60% 30%, var(--green) 0 5px, transparent 6px),
-    radial-gradient(circle at 80% 30%, var(--green) 0 5px, transparent 6px),
-    radial-gradient(circle at 20% 50%, var(--magenta) 0 5px, transparent 6px),
-    radial-gradient(circle at 40% 50%, var(--magenta) 0 5px, transparent 6px),
-    radial-gradient(circle at 60% 50%, var(--magenta) 0 5px, transparent 6px),
-    radial-gradient(circle at 80% 50%, var(--magenta) 0 5px, transparent 6px),
-    radial-gradient(circle at 50% 80%, var(--cyan) 0 8px, transparent 9px);
-  filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
-}
 .cover-rocas {
   background: radial-gradient(circle at 50% 50%, #0a0a30, #000);
 }
@@ -829,21 +785,6 @@ body {
     repeating-linear-gradient(0deg, rgba(0, 245, 255, 0.18) 0 20px, transparent 20px 40px),
     radial-gradient(circle at 50% 55%, var(--green) 0 14px, transparent 15px);
   filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
-}
-.cover-duelo {
-  background: #0a0a18;
-}
-.cover-duelo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(0deg, var(--ink) 0 10px, transparent 10px 20px) 50% 0/2px 100%
-      no-repeat,
-    linear-gradient(var(--cyan), var(--cyan)) 6% 35%/6px 30% no-repeat,
-    linear-gradient(var(--magenta), var(--magenta)) 88% 35%/6px 30% no-repeat,
-    radial-gradient(circle at 60% 60%, var(--yellow) 0 5px, transparent 6px);
-  filter: drop-shadow(0 0 6px rgba(0, 245, 255, 0.4));
 }
 /* ===== detail screen ===== */
 .av-detail {
