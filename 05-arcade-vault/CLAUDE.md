@@ -181,8 +181,8 @@ vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proces
 agregue un juego.
 
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
-`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 16 specs en
-`specs/01-...` a `specs/16-...`; seguir el mismo patrón de numeración al
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 17 specs en
+`specs/01-...` a `specs/17-...`; seguir el mismo patrón de numeración al
 agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 `specs/game-jam/<id>/` (promovida: `ranaria/` → FROGGER).
 
