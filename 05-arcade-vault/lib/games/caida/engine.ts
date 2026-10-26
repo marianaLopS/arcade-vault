@@ -269,6 +269,12 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
   /** Aviso en pantalla del último power-up aplicado, y lo que le queda. */
   let toastPower: PowerId | null = null;
   let toastMs = 0;
+  /**
+   * El tablero sólo cambia al caer una fila, al fijar una pieza o con una
+   * tecla: entre medias el canvas ya muestra el frame correcto. El reloj de
+   * "Congelar" y el aviso de power-up sí se repintan cada frame mientras duran.
+   */
+  let dirty = true;
   // ── Lógica de la partida ──
   function ghostY(): number {
     let gy = current.y;
@@ -390,6 +396,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     freezeMs = 0;
     toastPower = null;
     toastMs = 0;
+    dirty = true;
     next = randomPiece(level);
     spawn();
   }
@@ -618,6 +625,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     ctx.globalAlpha = 1;
   }
   function draw() {
+    dirty = false;
     ctx.clearRect(0, 0, W, H);
     drawBoard();
     drawPanel();
@@ -653,6 +661,7 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     dropAccum += dt;
     if (dropAccum >= dropInterval) {
       dropAccum = 0;
+      dirty = true;
       if (!collide(board, current.shape, current.x, current.y + 1)) current.y++;
       else lockPiece();
     }
@@ -665,9 +674,11 @@ export function createCaidaGame(canvas: HTMLCanvasElement, callbacks: GameCallba
     // la pieza varias filas.
     const dt = lastTime === null ? 0 : Math.min(ts - lastTime, 50);
     lastTime = ts;
+    // Se mira antes de descontar: el frame en que llegan a 0 también se repinta.
+    const animating = toastMs > 0 || freezeMs > 0;
     if (toastMs > 0) toastMs = Math.max(0, toastMs - dt);
     tick(dt);
-    draw();
+    if (dirty || animating) draw();
     emit();
     if (gameOver) {
       stopLoop();
