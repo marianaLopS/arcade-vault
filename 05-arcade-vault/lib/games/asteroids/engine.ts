@@ -33,6 +33,33 @@ function glow(ctx: CanvasRenderingContext2D, pal: Palette, color: string) {
 function noGlow(ctx: CanvasRenderingContext2D, pal: Palette) {
   if (pal.glow > 0) ctx.shadowBlur = 0;
 }
+/**
+ * Con glow, el `shadowBlur` de cada entidad por frame es lo más caro del
+ * dibujo. Las formas que no cambian (bala, polígono de cada asteroide) se
+ * pintan una vez con su glow en un canvas propio y luego sólo se copian.
+ * `paint` dibuja centrado en el origen. Sin glow se dibuja en vectorial.
+ */
+function glowSprite(
+  pal: Palette,
+  radius: number,
+  paint: (ctx: CanvasRenderingContext2D) => void,
+): HTMLCanvasElement {
+  const half = Math.ceil(radius + 2 * pal.glow + 2);
+  const c = document.createElement("canvas");
+  c.width = c.height = 2 * half;
+  const sc = c.getContext("2d");
+  if (sc) {
+    sc.translate(half, half);
+    paint(sc);
+  }
+  return c;
+}
+/** Quita del array, en sitio, las entidades marcadas dead (sin crear otro array). */
+function prune<T extends { dead: boolean }>(list: T[]) {
+  let j = 0;
+  for (const item of list) if (!item.dead) list[j++] = item;
+  list.length = j;
+}
 // ── Constantes ────────────────────────────────────────────────────────────────
 // Power-up de disparo triple
 const TRIPLE_DURACION = 6; // s de efecto
@@ -70,13 +97,14 @@ const GAME_KEYS = new Set([
 ]);
 type Keys = Record<string, boolean>;
 // ── Bullet ────────────────────────────────────────────────────────────────────
+const BULLET_RADIUS = 2;
 class Bullet {
   x: number;
   y: number;
   vx: number;
   vy: number;
   ttl = 1.1;
-  radius = 2;
+  radius = BULLET_RADIUS;
   dead = false;
   constructor(x: number, y: number, angle: number) {
     this.x = x;
@@ -91,13 +119,18 @@ class Bullet {
     this.ttl -= dt;
     if (this.ttl <= 0) this.dead = true;
   }
-  draw(ctx: CanvasRenderingContext2D, pal: Palette) {
+  /** Pinta la bala centrada en el origen (vectorial o dentro de su sprite). */
+  static paint(ctx: CanvasRenderingContext2D, pal: Palette, x: number, y: number) {
     ctx.fillStyle = pal.bullet;
     glow(ctx, pal, pal.bullet);
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.arc(x, y, BULLET_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     noGlow(ctx, pal);
+  }
+  draw(ctx: CanvasRenderingContext2D, pal: Palette, sprite: HTMLCanvasElement | null) {
+    if (sprite) ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+    else Bullet.paint(ctx, pal, this.x, this.y);
   }
 }
 // ── Asteroid ──────────────────────────────────────────────────────────────────
@@ -115,6 +148,8 @@ class Asteroid {
   rotSpeed: number;
   verts: [number, number][] = [];
   dead = false;
+  /** Polígono ya pintado con glow; se crea en el primer draw con glow. */
+  sprite: HTMLCanvasElement | null = null;
   constructor(x: number, y: number, size = 3) {
     this.x = x;
     this.y = y;
@@ -146,10 +181,8 @@ class Asteroid {
       new Asteroid(this.x, this.y, this.size - 1),
     ];
   }
-  draw(ctx: CanvasRenderingContext2D, pal: Palette) {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rot);
+  /** Contorno centrado en el origen, sin rotar. */
+  paint(ctx: CanvasRenderingContext2D, pal: Palette) {
     ctx.strokeStyle = pal.asteroid;
     glow(ctx, pal, pal.asteroid);
     ctx.lineWidth = 1.5;
@@ -159,6 +192,16 @@ class Asteroid {
     for (let i = 1; i < this.verts.length; i++) ctx.lineTo(this.verts[i][0], this.verts[i][1]);
     ctx.closePath();
     ctx.stroke();
+  }
+  draw(ctx: CanvasRenderingContext2D, pal: Palette) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+    if (pal.glow > 0) {
+      this.sprite ??= glowSprite(pal, this.radius, (c) => this.paint(c, pal));
+      const half = this.sprite.width / 2;
+      ctx.drawImage(this.sprite, -half, -half);
+    } else this.paint(ctx, pal);
     ctx.restore();
   }
 }
@@ -365,10 +408,10 @@ class Particle {
     this.ttl -= dt;
     if (this.ttl <= 0) this.dead = true;
   }
-  draw(ctx: CanvasRenderingContext2D, pal: Palette) {
-    const alpha = this.ttl / this.life;
-    ctx.strokeStyle = `rgba(${pal.particleRgb},${alpha.toFixed(2)})`;
-    ctx.lineWidth = 1;
+  /** `strokeStyle` y `lineWidth` los fija quien llama, una vez para todas. */
+  draw(ctx: CanvasRenderingContext2D) {
+    // Mismo redondeo a centésimas que el `rgba()` original, sin crear un string.
+    ctx.globalAlpha = Math.round((this.ttl / this.life) * 100) / 100;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.x - this.vx * 0.05, this.y - this.vy * 0.05);
@@ -383,6 +426,9 @@ export const createAsteroidsGame: GameFactory = (
 ): GameEngine => {
   // Paleta resuelta una vez: cambiar de skin recrea el motor.
   const pal = PALETTES[options?.skin ?? DEFAULT_SKIN];
+  const particleColor = `rgb(${pal.particleRgb})`;
+  const bulletSprite =
+    pal.glow > 0 ? glowSprite(pal, BULLET_RADIUS, (c) => Bullet.paint(c, pal, 0, 0)) : null;
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) throw new Error("El canvas de Asteroids no expone un contexto 2D");
   // Anotado explícito: dentro de las clausuras de abajo se pierde el estrechamiento.
@@ -495,7 +541,7 @@ export const createAsteroidsGame: GameFactory = (
       explode(a.x, a.y, a.size * 5);
       a.dead = true;
     }
-    asteroids = asteroids.filter((a) => !a.dead);
+    prune(asteroids);
   }
   function killShip() {
     explode(ship.x, ship.y, 14);
@@ -519,10 +565,10 @@ export const createAsteroidsGame: GameFactory = (
     if (state === "dead") {
       deadTimer -= dt;
       for (const p of particles) p.update(dt);
-      particles = particles.filter((p) => !p.dead);
+      prune(particles);
       for (const a of asteroids) a.update(dt);
       for (const p of powerUps) p.update(dt);
-      powerUps = powerUps.filter((p) => !p.dead);
+      prune(powerUps);
       if (deadTimer <= 0) {
         state = "playing";
         ship.reset();
@@ -554,9 +600,9 @@ export const createAsteroidsGame: GameFactory = (
     for (const a of asteroids) a.update(dtAst);
     for (const p of particles) p.update(dt);
     for (const p of powerUps) p.update(dt);
-    bullets = bullets.filter((b) => !b.dead);
-    particles = particles.filter((p) => !p.dead);
-    powerUps = powerUps.filter((p) => !p.dead);
+    prune(bullets);
+    prune(particles);
+    prune(powerUps);
     // Bala vs asteroide
     const newAsteroids: Asteroid[] = [];
     let lastKill: Point | null = null; // posición del último roto (para soltar el power-up)
@@ -572,8 +618,9 @@ export const createAsteroidsGame: GameFactory = (
         }
       }
     }
-    asteroids = asteroids.filter((a) => !a.dead).concat(newAsteroids);
-    bullets = bullets.filter((b) => !b.dead);
+    prune(asteroids);
+    for (const a of newAsteroids) asteroids.push(a);
+    prune(bullets);
     // Soltar el power-up: aleatorio, y forzado con pocos asteroides restantes
     // para garantizar al menos una aparición por nivel.
     if (!powerUpSpawned && lastKill) {
@@ -597,7 +644,7 @@ export const createAsteroidsGame: GameFactory = (
           else tripleTimer = TRIPLE_DURACION;
         }
       }
-      powerUps = powerUps.filter((p) => !p.dead);
+      prune(powerUps);
     }
     // Nave vs asteroide
     if (ship.invincible <= 0) {
@@ -615,7 +662,7 @@ export const createAsteroidsGame: GameFactory = (
           break;
         }
       }
-      asteroids = asteroids.filter((a) => !a.dead);
+      prune(asteroids);
     }
     // Nivel completado
     if (asteroids.length === 0) nextLevel();
@@ -694,10 +741,15 @@ export const createAsteroidsGame: GameFactory = (
   function draw() {
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
-    for (const p of particles) p.draw(ctx, pal);
+    if (particles.length) {
+      ctx.strokeStyle = particleColor;
+      ctx.lineWidth = 1;
+      for (const p of particles) p.draw(ctx);
+      ctx.globalAlpha = 1;
+    }
     for (const a of asteroids) a.draw(ctx, pal);
     for (const p of powerUps) p.draw(ctx, pal);
-    for (const b of bullets) b.draw(ctx, pal);
+    for (const b of bullets) b.draw(ctx, pal, bulletSprite);
     ship.draw(ctx, pal, hiperActivo);
     drawEscudo();
     drawNova();
