@@ -69,18 +69,34 @@ export function createSnakeGame(
   /** Quieta hasta el primer giro: no choca al abrir la página ni tras reiniciar. */
   let waiting = true;
   let state: "playing" | "gameover" = "playing";
+  /**
+   * El tablero sólo cambia en un tick, al cargar la fruta o al salir de la
+   * espera: entre medias el canvas ya muestra el frame correcto y no se repinta.
+   */
+  let dirty = true;
+  /** Celdas ocupadas por la serpiente, reutilizada en cada placeFruit(). */
+  const occupied = new Uint8Array(COLS * ROWS);
   // ── Lógica de la partida ──
   function placeFruit() {
-    const free: Cell[] = [];
-    for (let y = 0; y < ROWS; y++)
-      for (let x = 0; x < COLS; x++)
-        if (!snake.some((s) => s.x === x && s.y === y)) free.push({ x, y });
+    // Mismo reparto que una lista de huecos recorrida por filas: se cuenta, se
+    // elige el n-ésimo hueco, sin crear la lista ni recorrer la serpiente por celda.
+    occupied.fill(0);
+    for (const c of snake) occupied[c.y * COLS + c.x] = 1;
+    let free = 0;
+    for (let i = 0; i < occupied.length; i++) if (!occupied[i]) free++;
     // Tablero lleno: no hay dónde poner fruta, la partida termina.
-    if (!free.length) {
+    if (!free) {
       state = "gameover";
       return;
     }
-    fruit = free[Math.floor(Math.random() * free.length)];
+    let n = Math.floor(Math.random() * free);
+    for (let i = 0; i < occupied.length; i++) {
+      if (occupied[i]) continue;
+      if (n-- === 0) {
+        fruit = { x: i % COLS, y: Math.floor(i / COLS) };
+        break;
+      }
+    }
     fruitSprite = Math.floor(Math.random() * FRUIT_SPRITES.length);
   }
   function initGame() {
@@ -93,6 +109,7 @@ export function createSnakeGame(
     tickAccum = 0;
     waiting = true;
     state = "playing";
+    dirty = true;
     placeFruit();
   }
   function enqueueTurn(next: Dir) {
@@ -102,9 +119,11 @@ export function createSnakeGame(
     if (next === last || next === OPPOSITE[last]) return;
     if (turns.length >= MAX_TURNS) return;
     turns.push(next);
+    if (waiting) dirty = true; // se borra el rótulo
     waiting = false;
   }
   function step() {
+    dirty = true;
     const turn = turns.shift();
     if (turn) dir = turn;
     const d = DELTA[dir];
@@ -164,6 +183,7 @@ export function createSnakeGame(
     if (destroyed) return;
     if (pal.fruitTint) tinted = buildTinted(pal.fruitTint);
     imgReady = true;
+    dirty = true;
     if (rafId === null) draw(); // pausado o en espera de start(): que se vea la fruta
   };
   img.onerror = () => console.error("No se pudo cargar la hoja de frutas de Snake");
@@ -250,6 +270,7 @@ export function createSnakeGame(
     if (pal.glow > 0) ctx.shadowBlur = 0;
   }
   function draw() {
+    dirty = false;
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     drawGrid();
@@ -268,7 +289,7 @@ export function createSnakeGame(
     const dt = lastTime === null ? 0 : Math.min(ts - lastTime, DT_MAX);
     lastTime = ts;
     update(dt);
-    draw();
+    if (dirty) draw();
     emit();
     if (state === "gameover") {
       stopLoop();
@@ -310,6 +331,7 @@ export function createSnakeGame(
     // En espera, la dirección actual también arranca (sin encolarse); el 180° no.
     if (waiting && next === dir) {
       waiting = false;
+      dirty = true;
       return;
     }
     enqueueTurn(next);
