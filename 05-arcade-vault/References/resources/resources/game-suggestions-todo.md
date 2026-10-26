@@ -2,9 +2,10 @@
 
 ## 2026-09-21
 
+**Nota (2026-10-26):** las maquetas `gloton`, `invasores`, `duelo-pixel` se eliminaron del catálogo; esta sugerencia queda descartada salvo que se proponga como juego nuevo.
 **Sugerencia:** invasores
 **Motivo:** Ya está en maqueta (slot, portada, categoría SHOOTER y UI), solo falta el motor. Equilibra el catálogo: ARCADE ya tiene snake y arkanoid reales, y SHOOTER solo tiene asteroids; además reutiliza la experiencia de disparo/colisiones de asteroids con menor esfuerzo que `duelo-pixel` (VERSUS, requiere rival).
-**Estado:** pendiente
+**Estado:** descartada (maqueta eliminada)
 
 ## 2026-09-22
 
@@ -28,7 +29,7 @@
 
 **Sugerencia:** paperboy (esquivar obstáculos en bicicleta mientras repartes periódicos)
 **Motivo:** Híbrido de carrera lateral + puntería/habilidad (lanzar periódicos a buzones) que no se solapa con ningún juego actual ni con `ranaria` (que es cruce estático, no scroll continuo); buen segundo candidato de RACING/ARCADE si `pole-position` se reserva para un slot puramente de carreras.
-**Estado:** pendiente
+**Estado:** descartada (maqueta eliminada)
 
 ## 2026-09-22
 
@@ -40,7 +41,7 @@
 4. **AIR HOCKEY** — Motivo: variante de "duelo de paletas" pero con física de disco en mesa cerrada (rebotes en 4 bordes, gol en cada extremo) en vez del pong vertical de `duelo-pixel`; cubre VERSUS con una mecánica físicamente distinta, no un remake del mismo pong.
 5. **BOWLING** — Motivo: único juego "de puntería con física de trayectoria + pines" del lote; aporta un loop de turnos cortos (10 frames) que ningún juego actual tiene, y un sistema de scoring propio del género (strikes/spares) distinto del score acumulado genérico.
 
-**Estado:** pendiente
+**Estado:** descartada (maqueta eliminada)
 
 ## 2026-09-22
 

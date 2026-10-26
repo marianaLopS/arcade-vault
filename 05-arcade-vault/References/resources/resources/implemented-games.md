@@ -13,14 +13,8 @@ Fuente: tabla `games` + vista `game_stats` en Supabase. Consultado 2026-10-19.
 Cada uno tiene fila propia en `games`, leaderboard real en `scores` y aparece en `game_stats`
 (vista derivada de `scores`, con `security_invoker`).
 
-## Pendientes (modo maqueta)
+## Maquetas eliminadas (2026-10-26)
 
-Estos siguen sin motor propio ni fila en `games`; pintan `seededScores()` de `lib/games.ts`
-en vez de datos reales:
-
-- `gloton`
-- `invasores`
-- `duelo-pixel`
-
-Para portar uno de estos a juego real, seguir la skill `nuevo-juego` del repo (spec primero,
-luego motor, catálogo, CSS, registro, migración y leaderboard).
+`gloton`, `invasores` y `duelo-pixel` (sin motor ni fila en `games`) se quitaron de
+`lib/games.ts` y sus portadas de `globals.css`; también la categoría `VERSUS`. Para añadir un
+juego nuevo, seguir la skill `nuevo-juego`.

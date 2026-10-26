@@ -9,9 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Arcade Vault: plataforma web para jugar juegos arcade online y competir por puntuación.
 Estado actual: 5 juegos jugables con motor propio — **ASTEROIDS**, **TETRIS** (id `caida`),
 **ARKANOID**, **SNAKE** y **FROGGER** (id `frogger`, nacido de la game-jam `ranaria`) — cada
-uno con leaderboard real en Supabase. El resto del catálogo (`gloton`, `invasores`,
-`duelo-pixel`) sigue en modo maqueta, pintando `seededScores()` de `lib/games.ts` en vez de
-datos reales.
+uno con leaderboard real en Supabase. Los juegos de maqueta (`gloton`, `invasores`,
+`duelo-pixel`) se eliminaron del catálogo; `lib/games.ts` sólo lista juegos reales.
 
 El README indica que el flujo de trabajo es **Spec Driven Design** con los comandos `/spec`
 y `/spec-impl` de las skills `Klerith/fernando-skills` (instalar con
@@ -53,7 +52,7 @@ eventos por callbacks, sin React dentro. `lib/games/registry.ts` (`GAME_ENGINES`
 En el lado de React: `components/game-canvas.tsx` monta/desmonta el motor sobre el canvas;
 `components/game-player.tsx` (`GamePlayer`) es el orquestador — HUD, pausa, modal de guardar
 puntuación — y cae a una simulación `.game-arena` cuando `getEngine(id)` devuelve `undefined`
-(los 3 juegos aún sin motor). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
+(hoy ningún juego del catálogo; queda como red de seguridad). `components/leaderboard.tsx` (`Leaderboard`) pinta la tabla de
 mejores puntuaciones dentro de `GamePlayer` cuando `hasLeaderboard` es `true`.
 
 Móvil (SPEC 11): `components/touch-pad.tsx` (`TouchPad`) es un mando virtual común — cruceta
@@ -112,8 +111,8 @@ RLS activa en `games`, `scores` y `profiles`: `select` público; `insert` en `sc
 garantía real, la acción existe para dar un mensaje legible.
 
 Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`) y devuelven el
-caso vacío ante un error en vez de lanzar. Los tres juegos sin fila en `games` (`gloton`,
-`invasores`, `duelo-pixel`) siguen pintando `seededScores()` de `lib/games.ts`.
+caso vacío ante un error en vez de lanzar. Si `hasLeaderboard` da `false` (p. ej. error de BD),
+las páginas caen a `seededScores()` de `lib/games.ts`.
 
 Tras cualquier cambio de esquema hay que regenerar los tipos:
 

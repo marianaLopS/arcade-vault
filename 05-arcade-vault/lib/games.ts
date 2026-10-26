@@ -1,5 +1,5 @@
 // Datos mock de Arcade Vault. Puerto de References/…/templates/data.jsx.
-export type Cat = "ARCADE" | "PUZZLE" | "SHOOTER" | "VERSUS";
+export type Cat = "ARCADE" | "PUZZLE" | "SHOOTER";
 export type Game = {
   /** Identificador y segmento de URL: /juegos/arkanoid */
   id: string;
@@ -56,28 +56,6 @@ export const GAMES: Game[] = [
     plays: "9.1K",
   },
   {
-    id: "gloton",
-    title: "GLOTÓN",
-    short: "Devora puntos y escapa de los fantasmas.",
-    long: "Un círculo glotón patrulla un laberinto coleccionando puntos luminosos. Cuatro espectros lo persiguen, pero cada cierto tiempo aparece una píldora que invierte los papeles.",
-    cat: "ARCADE",
-    cover: "cover-glot",
-    color: "yellow",
-    best: 96400,
-    plays: "27.2K",
-  },
-  {
-    id: "invasores",
-    title: "INVASORES",
-    short: "Defiende el planeta de filas alienígenas.",
-    long: "Olas de pixeles hostiles descienden formación tras formación. Mueve tu cañón en horizontal y abre fuego con precisión, antes de que toquen la superficie.",
-    cat: "SHOOTER",
-    cover: "cover-invaders",
-    color: "green",
-    best: 54190,
-    plays: "18.0K",
-  },
-  {
     id: "asteroids",
     title: "ASTEROIDS",
     short: "Pulveriza asteroides en gravedad cero.",
@@ -99,19 +77,8 @@ export const GAMES: Game[] = [
     best: 18900,
     plays: "6.4K",
   },
-  {
-    id: "duelo-pixel",
-    title: "DUELO PIXEL",
-    short: "Dos paletas. Una pelota. Reflejos máximos.",
-    long: "El duelo más puro: dos paletas verticales se enfrentan por rebotar una pelota luminosa. Modo solitario contra la CPU o partida local a dos jugadores.",
-    cat: "VERSUS",
-    cover: "cover-duelo",
-    color: "cyan",
-    best: 24,
-    plays: "4.2K",
-  },
 ];
-export const CATS = ["TODOS", "ARCADE", "PUZZLE", "SHOOTER", "VERSUS"] as const;
+export const CATS = ["TODOS", "ARCADE", "PUZZLE", "SHOOTER"] as const;
 export const PLAYERS = [
   "PX_KAI",
   "NEONFOX",
