@@ -9,7 +9,6 @@ Fuente: tabla `games` + vista `game_stats` en Supabase. Consultado 2026-10-19.
 | `arkanoid` | ARKANOID | Sí (con `sprites.ts`) | 50 | 1 | 2026-09-14 |
 | `snake` | SNAKE | Sí (con `sprites.ts`) | 110 | 3 | 2026-09-14 |
 | `frogger` | FROGGER | Sí | 350 | 2 | 2026-09-25 |
-| `salto-simio` | SALTO SIMIO | Sí (sin skins; SPEC 17) | 0 | 1 | 2026-10-19 |
 
 Cada uno tiene fila propia en `games`, leaderboard real en `scores` y aparece en `game_stats`
 (vista derivada de `scores`, con `security_invoker`).

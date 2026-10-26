@@ -830,44 +830,6 @@ body {
     radial-gradient(circle at 50% 55%, var(--green) 0 14px, transparent 15px);
   filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
 }
-/* Vigas que bajan alternando sentido, como la pantalla del motor; escaleras y barriles encima. */
-.cover-simio {
-  background: linear-gradient(180deg, #1a0014, #0a0a18);
-}
-.cover-simio::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(176deg, transparent 0 40%, var(--magenta) 40% 62%, transparent 62%) 0 14% / 70%
-      18% no-repeat,
-    linear-gradient(184deg, transparent 0 40%, var(--magenta) 40% 62%, transparent 62%) 100% 36% /
-      80% 18% no-repeat,
-    linear-gradient(176deg, transparent 0 40%, var(--magenta) 40% 62%, transparent 62%) 0 58% / 80%
-      18% no-repeat,
-    linear-gradient(184deg, transparent 0 40%, var(--magenta) 40% 62%, transparent 62%) 100% 80% /
-      80% 18% no-repeat,
-    linear-gradient(var(--magenta), var(--magenta)) 0 100% / 100% 4% no-repeat;
-  filter: drop-shadow(0 0 6px rgba(255, 0, 110, 0.55));
-}
-.cover-simio::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background:
-    repeating-linear-gradient(0deg, var(--cyan) 0 2px, transparent 2px 7px) 60% 26% / 14px 18%
-      no-repeat,
-    repeating-linear-gradient(0deg, var(--cyan) 0 2px, transparent 2px 7px) 24% 47% / 14px 21%
-      no-repeat,
-    repeating-linear-gradient(0deg, var(--cyan) 0 2px, transparent 2px 7px) 70% 68% / 14px 20%
-      no-repeat,
-    radial-gradient(circle at 47% 34%, var(--yellow) 0 6px, transparent 7px),
-    radial-gradient(circle at 35% 69%, var(--yellow) 0 6px, transparent 7px),
-    radial-gradient(circle at 93% 58%, var(--yellow) 0 6px, transparent 7px),
-    linear-gradient(#a0522d, #a0522d) 8% 11% / 12% 14% no-repeat;
-  filter: drop-shadow(0 0 5px rgba(245, 255, 0, 0.45));
-}
 .cover-duelo {
   background: #0a0a18;
 }
