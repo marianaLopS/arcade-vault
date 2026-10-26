@@ -91,6 +91,7 @@ export const GAME_ENGINES: Record<string, GameEngineEntry> = {
     width: 800,
     height: 600,
     controls: "flechas o WASD para moverte y trepar, espacio para saltar",
+    skins: true,
     touch: { a: { code: "Space", label: "SALTO" } },
   },
 };

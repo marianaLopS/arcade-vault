@@ -2,9 +2,12 @@
 //
 // No hay original del que portar: las constantes de este archivo son el diseño
 // del juego (SPEC game-jam/salto-simio/01, paso 1). Cambiarlas es rediseñar, no
-// implementar. Todo se dibuja con primitivas canvas, sin sprites. Como en los
+// implementar. Todo se dibuja con primitivas canvas, sin sprites; los colores
+// salen de la paleta del skin (lib/games/salto-simio/skins.ts). Como en los
 // demás motores, el estado vive en la clausura de la factoría.
-import type { GameCallbacks, GameEngine } from "@/lib/games/engine";
+import type { GameCallbacks, GameEngine, GameOptions } from "@/lib/games/engine";
+import { PALETTES } from "@/lib/games/salto-simio/skins";
+import { DEFAULT_SKIN } from "@/lib/games/skins";
 const W = 800;
 const H = 600;
 type Girder = { x0: number; x1: number; y0: number; y1: number }; // y0 en x0, y1 en x1 (superficie)
@@ -87,19 +90,6 @@ const SIMIO_H = 64;
 const GOAL_H = 28;
 const GOAL_INSET = 10;
 const FACE_W = 6;
-const COLOR_BG = "#000000";
-const COLOR_GIRDER = "#ff2bd6"; // magenta neón
-const COLOR_LADDER = "#00c8d8"; // cian
-const COLOR_OIL = "#2f5cff";
-const COLOR_SIMIO = "#a0522d";
-const COLOR_GOAL = "#ffffff";
-const COLOR_BARREL = "#ffd400";
-const COLOR_BARREL_STRIPE = "#7a4a00";
-const COLOR_HERO = "#5ff7ff";
-const COLOR_HERO_DEAD = "#ff4040";
-const COLOR_HERO_FACE = "#003040";
-const COLOR_BONUS = "#ffd400";
-const COLOR_BONUS_BG = "#2a2a2a";
 function surface(g: Girder, x: number): number {
   return g.y0 + ((g.y1 - g.y0) * (x - g.x0)) / (g.x1 - g.x0);
 }
@@ -112,7 +102,9 @@ function barrelSpeed(level: number): number {
 export function createSaltoSimioGame(
   canvas: HTMLCanvasElement,
   callbacks: GameCallbacks,
+  options?: GameOptions,
 ): GameEngine {
+  const pal = PALETTES[options?.skin ?? DEFAULT_SKIN];
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) throw new Error("SALTO SIMIO: el canvas no tiene contexto 2D");
   const ctx: CanvasRenderingContext2D = ctx2d;
@@ -465,14 +457,23 @@ export function createSaltoSimioGame(
   function blink(periodMs: number): boolean {
     return Math.floor(clock / periodMs) % 2 === 0;
   }
+  function glow(color: string) {
+    if (pal.glow <= 0) return;
+    ctx.shadowBlur = pal.glow;
+    ctx.shadowColor = color;
+  }
+  /** Quita el glow tras cada elemento: no se arrastra al resto del frame. */
+  function noGlow() {
+    if (pal.glow > 0) ctx.shadowBlur = 0;
+  }
   function drawBonusBar() {
-    ctx.fillStyle = COLOR_BONUS_BG;
+    ctx.fillStyle = pal.bonusBg;
     ctx.fillRect(0, 0, W, BONUS_BAR_H);
-    ctx.fillStyle = COLOR_BONUS;
+    ctx.fillStyle = pal.bonus;
     ctx.fillRect(0, 0, (W * bonus) / BONUS_START, BONUS_BAR_H);
   }
   function drawLadders() {
-    ctx.strokeStyle = COLOR_LADDER;
+    ctx.strokeStyle = pal.ladder;
     ctx.lineWidth = 3;
     ctx.beginPath();
     for (let i = 0; i < LADDERS.length; i++) {
@@ -493,7 +494,8 @@ export function createSaltoSimioGame(
     ctx.stroke();
   }
   function drawGirders() {
-    ctx.fillStyle = COLOR_GIRDER;
+    ctx.fillStyle = pal.girder;
+    glow(pal.girder);
     ctx.beginPath();
     for (let i = 0; i < GIRDERS.length; i++) {
       const g = GIRDERS[i];
@@ -504,22 +506,24 @@ export function createSaltoSimioGame(
       ctx.closePath();
     }
     ctx.fill();
+    noGlow();
   }
   function drawProps() {
     const floor = GIRDERS[0].y0;
     const top = GIRDERS[TOP].y0;
-    ctx.fillStyle = COLOR_OIL;
+    ctx.fillStyle = pal.oil;
     ctx.fillRect(OIL_DRUM.x0, floor - OIL_H, OIL_DRUM.x1 - OIL_DRUM.x0, OIL_H);
-    ctx.fillStyle = COLOR_SIMIO;
+    ctx.fillStyle = pal.simio;
     ctx.fillRect(SIMIO.x0, top - SIMIO_H, SIMIO.x1 - SIMIO.x0, SIMIO_H);
     // Rescate: parpadea siempre; rápido mientras se celebra la victoria.
     if (blink(heroState === "won" ? 100 : 400)) {
-      ctx.fillStyle = COLOR_GOAL;
+      ctx.fillStyle = pal.goal;
       ctx.fillRect(GOAL.x0 + GOAL_INSET, top - GOAL_H, GOAL.x1 - GOAL.x0 - 2 * GOAL_INSET, GOAL_H);
     }
   }
   function drawBarrels() {
-    ctx.fillStyle = COLOR_BARREL;
+    ctx.fillStyle = pal.barrel;
+    glow(pal.barrel);
     ctx.beginPath();
     for (let i = 0; i < barrels.length; i++) {
       const b = barrels[i];
@@ -527,8 +531,9 @@ export function createSaltoSimioGame(
       ctx.arc(b.x, b.y, BARREL_R, 0, Math.PI * 2);
     }
     ctx.fill();
+    noGlow();
     // Raya que gira con lo rodado: ángulo = arco recorrido / radio.
-    ctx.strokeStyle = COLOR_BARREL_STRIPE;
+    ctx.strokeStyle = pal.barrelStripe;
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let i = 0; i < barrels.length; i++) {
@@ -545,15 +550,18 @@ export function createSaltoSimioGame(
     if (heroState === "dying" && !blink(100)) return;
     const left = hero.x - HERO_W / 2;
     const top = hero.y - HERO_H;
-    ctx.fillStyle = heroState === "dying" ? COLOR_HERO_DEAD : COLOR_HERO;
+    const body = heroState === "dying" ? pal.heroDead : pal.hero;
+    ctx.fillStyle = body;
+    glow(body);
     ctx.fillRect(left, top, HERO_W, HERO_H);
+    noGlow();
     // Marcador de la cara: hacia donde mira.
-    ctx.fillStyle = COLOR_HERO_FACE;
+    ctx.fillStyle = pal.heroFace;
     const fx = hero.face === 1 ? left + HERO_W - FACE_W - 2 : left + 2;
     ctx.fillRect(fx, top + 6, FACE_W, FACE_W);
   }
   function draw() {
-    ctx.fillStyle = COLOR_BG;
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     drawLadders();
     drawGirders();
