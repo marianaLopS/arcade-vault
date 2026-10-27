@@ -141,9 +141,13 @@ Supabase Auth con email + contraseña (confirmación de correo obligatoria), Goo
   invitado.
 
 Configuración externa (manual, ya hecha en desarrollo): en el dashboard de Supabase, Site URL
-`http://localhost:3000` y Redirect URLs `/auth/callback` y `/auth/confirm`; "Confirm email"
-activado; plantillas "Confirm signup" y "Reset password" con enlace
-`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` (o `type=recovery`); clientes
+`http://localhost:3000` y Redirect URLs `/auth/callback`, `/auth/confirm` y los orígenes
+`http://192.168.1.*:3000` y `http://192.168.1.*:3000/**` (pruebas desde el móvil en la LAN); "Confirm email"
+activado; plantillas "Confirm signup" y "Reset password" por defecto
+(`{{ .ConfirmationURL }}`): `registrar` y `pedirRecuperacion` mandan `redirectTo` =
+`<origen de la petición>/auth/confirm`, y Supabase vuelve ahí con `?code=` PKCE (el enlace sólo
+funciona en el navegador que pidió el correo). `/auth/confirm` también acepta `token_hash` por si se
+vuelve a una plantilla propia; clientes
 OAuth de Google Cloud y GitHub con callback `https://wlofsbjzfzywdgvovibv.supabase.co/auth/v1/callback`.
 En producción hay que añadir las URLs del dominio. SMTP: el de Supabase por defecto (pocos correos
 por hora).

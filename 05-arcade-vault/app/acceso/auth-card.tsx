@@ -131,6 +131,9 @@ export function AuthCard({ errorInicial }: { errorInicial: string | null }) {
               onChange={set("email")}
               placeholder="jugador@vault.gg"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               required
             />
           </div>

@@ -10,7 +10,6 @@ export type AuthResult = { ok: true; aviso?: string } | { ok: false; error: stri
 const USERNAME = /^[a-z0-9_]{3,16}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ERROR_GENERICO = "ALGO FALLÓ. INTÉNTALO DE NUEVO";
-
 /** Traduce el error de Supabase Auth al mensaje de la tabla de SPEC 14. */
 function mensajeDe(error: AuthError): string {
   switch (error.code) {
@@ -35,6 +34,10 @@ function texto(formData: FormData, campo: string): string {
   const valor = formData.get(campo);
   return typeof valor === "string" ? valor.trim() : "";
 }
+/** Email normalizado: el teclado del móvil pone mayúscula inicial y a veces espacios. */
+function emailDe(formData: FormData): string {
+  return texto(formData, "email").replace(/\s+/g, "").toLowerCase();
+}
 /**
  * Alta con usuario + email + contraseña. No inicia sesión: la confirmación de
  * correo es obligatoria y el enlace pasa por `/auth/confirm`. El username lo
@@ -42,7 +45,7 @@ function texto(formData: FormData, campo: string): string {
  */
 export async function registrar(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
   const username = texto(formData, "username").toLowerCase();
-  const email = texto(formData, "email");
+  const email = emailDe(formData);
   const password = formData.get("password");
   if (!USERNAME.test(username)) {
     return { ok: false, error: "EL USUARIO: 3 A 16 LETRAS, NÚMEROS O _" };
@@ -68,7 +71,9 @@ export async function registrar(_prev: AuthResult | null, formData: FormData): P
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      // Vuelta del correo a `/auth/confirm` en el origen de la petición (la IP de la
+      // LAN desde el móvil); si no está en Redirect URLs, Supabase usa la Site URL.
+      options: { data: { username }, emailRedirectTo: `${await origen()}/auth/confirm` },
     });
     if (error) {
       console.error("[registrar] signUp", error.code ?? error.message);
@@ -90,7 +95,7 @@ export async function iniciarSesion(
   _prev: AuthResult | null,
   formData: FormData,
 ): Promise<AuthResult> {
-  const email = texto(formData, "email");
+  const email = emailDe(formData);
   const password = formData.get("password");
   if (!EMAIL.test(email) || typeof password !== "string" || password.length === 0) {
     return { ok: false, error: "EMAIL O CONTRASEÑA INCORRECTOS" };
@@ -171,17 +176,19 @@ export async function entrarCon(proveedor: Proveedor): Promise<AuthResult> {
 /**
  * Pide el correo de recuperación. Responde siempre el mismo aviso, exista o no
  * la cuenta, para no permitir enumerar emails. El enlace pasa por
- * `/auth/confirm?type=recovery` y acaba en `/acceso/nueva-clave`.
+ * `/auth/confirm` (código PKCE de recuperación) y acaba en `/acceso/nueva-clave`.
  */
 export async function pedirRecuperacion(
   _prev: AuthResult | null,
   formData: FormData,
 ): Promise<AuthResult> {
-  const email = texto(formData, "email");
+  const email = emailDe(formData);
   if (!EMAIL.test(email)) return { ok: false, error: "ESE CORREO NO TIENE BUENA PINTA" };
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${await origen()}/auth/confirm`,
+    });
     if (error) {
       console.error("[pedirRecuperacion]", error.code ?? error.message);
       // El límite de envíos no revela si la cuenta existe: se puede decir.
