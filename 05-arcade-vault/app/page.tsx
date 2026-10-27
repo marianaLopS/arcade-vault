@@ -1,17 +1,26 @@
-"use client";
-
 import Link from "next/link";
-import { GAMES, type Game } from "@/lib/games";
+import { Reveal } from "@/components/reveal";
+import { GAMES, getGame, type Game } from "@/lib/games";
 import {
   FAQS,
   FEATURES,
   PLAN_FEATURES,
-  STATS,
-  TICKER,
-  TOP_TODAY,
+  type Acento,
   type Feature,
+  type StatBlock,
 } from "@/lib/home-data";
-import { useReveal } from "@/lib/use-reveal";
+import { recentScores, topScores, totalPlays } from "@/lib/scores";
+
+const TICK_COLORS: readonly Acento[] = ["magenta", "yellow", "green", "cyan"];
+
+/** "hace 5 min", "hace 3 h", "hace 2 d" a partir de un ISO. */
+function hace(iso: string): string {
+  const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} d`;
+}
 
 /** Siluetas pixeladas que flotan de fondo en el hero. Puramente decorativas. */
 function FloatingSilhouettes() {
@@ -206,11 +215,26 @@ function MiniCard({ game }: { game: Game }) {
   );
 }
 
-export default function HomePage() {
-  useReveal();
+export default async function HomePage() {
+  const [recientes, partidas, records] = await Promise.all([
+    recentScores(7),
+    totalPlays(),
+    Promise.all(GAMES.map((g) => topScores(g.id, 1))),
+  ]);
+  // Un campeón por juego, en el orden del catálogo; los juegos sin puntuación no salen.
+  const campeones = GAMES.flatMap((g, i) => {
+    const r = records[i][0];
+    return r ? [{ game: g.title, player: r.name, score: r.score }] : [];
+  });
+  const stats: StatBlock[] = [
+    { n: "TODAS", u: "LAS EDADES", s: "APTO PARA TODA LA FAMILIA" },
+    { n: partidas.toLocaleString("es-ES"), u: "PARTIDAS", s: "GUARDADAS EN EL RANKING" },
+    { n: "GLOBAL", u: "RANKING", s: "COMPITE CON EL MUNDO" },
+  ];
 
   return (
     <div className="home fade-in">
+      <Reveal />
       <section className="home-hero">
         <FloatingSilhouettes />
         <div className="home-hero-inner">
@@ -284,7 +308,7 @@ export default function HomePage() {
       {/* BANDA DE ESTADÍSTICAS */}
       <section className="home-stats reveal">
         <div className="stats-inner">
-          {STATS.map((st, i) => (
+          {stats.map((st, i) => (
             <div key={st.u} className="stat-block" style={{ transitionDelay: `${i * 90}ms` }}>
               <div className="stat-n neon-yellow">{st.n}</div>
               <div className="stat-u pixel">{st.u}</div>
@@ -307,12 +331,17 @@ export default function HomePage() {
               <div className="ac-title pixel">▸ ÚLTIMAS PUNTUACIONES</div>
             </div>
             <div className="ticker">
-              {TICKER.map((r, i) => (
-                <div key={r.player} className="tick-row" style={{ animationDelay: `${i * 60}ms` }}>
-                  <span className={"tk-p neon-" + r.color}>{r.player}</span>
-                  <span className="tk-mid">▸ {r.game}</span>
+              {recientes.length === 0 && (
+                <div className="tick-row tick-empty">SIN PARTIDAS TODAVÍA</div>
+              )}
+              {recientes.map((r, i) => (
+                <div key={i} className="tick-row" style={{ animationDelay: `${i * 60}ms` }}>
+                  <span className={"tk-p neon-" + TICK_COLORS[i % TICK_COLORS.length]}>
+                    {r.player}
+                  </span>
+                  <span className="tk-mid">▸ {getGame(r.gameId)?.title ?? r.gameId}</span>
                   <span className="tk-s">+{r.score.toLocaleString("es-ES")}</span>
-                  <span className="tk-t">{r.ago}</span>
+                  <span className="tk-t">{hace(r.createdAt)}</span>
                 </div>
               ))}
             </div>
@@ -320,24 +349,27 @@ export default function HomePage() {
 
           <div className="activity-card">
             <div className="ac-head">
-              <div className="ac-title pixel neon-magenta">▸ TOP JUGADORES · HOY</div>
+              <div className="ac-title pixel neon-magenta">▸ CAMPEONES · POR JUEGO</div>
               <Link className="lb-link" href="/salon">
                 VER SALÓN →
               </Link>
             </div>
             <div className="top-list">
-              {TOP_TODAY.map((r, i) => (
-                <div
-                  key={r.player}
-                  className={
-                    "top-row" + (i === 0 ? " top1" : i === 1 ? " top2" : i === 2 ? " top3" : "")
-                  }
-                >
-                  <span className="tp-rk">#{String(r.rank).padStart(2, "0")}</span>
+              {campeones.length === 0 && (
+                <div className="tick-row tick-empty">SIN RÉCORDS TODAVÍA</div>
+              )}
+              {/* Sin #01, medallas ni barras decrecientes: cada juego puntúa en su
+                  propia escala, así que los récords no se comparan entre sí. */}
+              {campeones.map((r) => (
+                <div key={r.game} className="top-row">
+                  <span className="tp-rk">✦</span>
                   <span className="tp-bar">
-                    <span className="tp-fill" style={{ width: `${100 - i * 16}%` }} />
+                    <span className="tp-fill" style={{ width: "100%" }} />
                   </span>
-                  <span className="tp-p">{r.player}</span>
+                  <span className="tp-p">
+                    {r.player}
+                    <span className="tp-g">{r.game}</span>
+                  </span>
                   <span className="tp-s">{r.score.toLocaleString("es-ES")}</span>
                 </div>
               ))}
