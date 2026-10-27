@@ -110,7 +110,7 @@ RLS activa en `games`, `scores` y `profiles`: `select` público; `insert` en `sc
 (`app/jugar/actions.ts`), que valida y hace `revalidatePath`; los `CHECK` de la tabla son la
 garantía real, la acción existe para dar un mensaje legible.
 
-Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`) y devuelven el
+Las lecturas viven en `lib/scores.ts` (`hasLeaderboard`, `topScores`, `gameStats`, y para la home `recentScores` y `totalPlays`, SPEC 18) y devuelven el
 caso vacío ante un error en vez de lanzar. Si `hasLeaderboard` da `false` (p. ej. error de BD),
 las páginas caen a `seededScores()` de `lib/games.ts`.
 
@@ -180,8 +180,8 @@ vía migración, y wiring del leaderboard. Úsala en vez de improvisar el proces
 agregue un juego.
 
 `/spec` y `/spec-impl` (de `Klerith/fernando-skills`, ver README; copia local en
-`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 17 specs en
-`specs/01-...` a `specs/17-...`; seguir el mismo patrón de numeración al
+`.agents/skills/`) siguen siendo el flujo general de Spec Driven Design. Ya hay 18 specs en
+`specs/01-...` a `specs/18-...`; seguir el mismo patrón de numeración al
 agregar una nueva. Las propuestas de juego de la game-jam van aparte en
 `specs/game-jam/<id>/` (promovida: `ranaria/` → FROGGER).
 

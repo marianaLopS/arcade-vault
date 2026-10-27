@@ -3034,6 +3034,20 @@ body {
   letter-spacing: 0.06em;
   color: var(--ink);
 }
+.tp-g {
+  margin-left: 10px;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+.tick-empty {
+  display: block;
+  text-align: center;
+  font-family: var(--pixel);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
 .tp-s {
   font-family: var(--pixel);
   font-size: 11px;
