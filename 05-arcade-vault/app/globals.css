@@ -693,6 +693,16 @@ body {
   letter-spacing: 0.06em;
   text-shadow: 0 0 6px rgba(245, 255, 0, 0.6);
 }
+.score-badge b i {
+  font-style: normal;
+  color: var(--cyan);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.5);
+  margin-left: 4px;
+}
+.score-badge b.empty {
+  color: var(--ink-faint);
+  text-shadow: none;
+}
 /* ===== Cover art generators (pure CSS) ===== */
 .cover-bg {
   position: absolute;
