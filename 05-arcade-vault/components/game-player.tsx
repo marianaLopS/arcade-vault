@@ -337,8 +337,8 @@ export function GamePlayer({
                   JUGAR DE NUEVO
                 </button>
               )}
-              <Link className="btn magenta" href={`/salon?juego=${game.id}`}>
-                VOLVER AL LEADERBOARD
+              <Link className="btn magenta" href="/biblioteca">
+                ELEGIR OTRO JUEGO
               </Link>
             </div>
           </div>
