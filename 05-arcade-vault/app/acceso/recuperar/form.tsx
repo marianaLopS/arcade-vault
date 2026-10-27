@@ -41,6 +41,9 @@ export function RecuperarForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="jugador@vault.gg"
           autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
         />
       </div>
