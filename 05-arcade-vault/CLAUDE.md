@@ -82,6 +82,11 @@ no un proceso ad-hoc.
   `sendContact` (`app/acerca/actions.ts`) para enviar el formulario de contacto de `/acerca`.
   Sin ella el formulario muestra un error legible en vez de fallar.
 
+- `SITE_URLS` — orígenes permitidos (separados por comas, el primero de reserva) para el
+  `redirectTo` de correos y OAuth en `app/acceso/actions.ts` (`origen()`). Las cabeceras de la
+  petición se pueden falsificar: sólo se usa el origen pedido si está en la lista. Por defecto
+  `http://localhost:3000`; para probar desde el móvil añadir `http://192.168.1.37:3000`. En
+  producción, sólo el dominio real, también en Redirect URLs del dashboard (sin comodines).
 - `NEXT_PUBLIC_SUPABASE_URL` — URL del proyecto de Supabase
   (`https://wlofsbjzfzywdgvovibv.supabase.co`).
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — clave publicable (`sb_publishable_…`) del mismo
@@ -141,8 +146,9 @@ Supabase Auth con email + contraseña (confirmación de correo obligatoria), Goo
   invitado.
 
 Configuración externa (manual, ya hecha en desarrollo): en el dashboard de Supabase, Site URL
-`http://localhost:3000` y Redirect URLs `/auth/callback`, `/auth/confirm` y los orígenes
-`http://192.168.1.*:3000` y `http://192.168.1.*:3000/**` (pruebas desde el móvil en la LAN); "Confirm email"
+`http://localhost:3000` y Redirect URLs `/auth/callback`, `/auth/confirm` y, para el
+móvil en la LAN, los orígenes de `SITE_URLS` (p. ej. `http://192.168.1.37:3000` y
+`http://192.168.1.37:3000/**`; evitar comodines como `192.168.1.*`); "Confirm email"
 activado; plantillas "Confirm signup" y "Reset password" por defecto
 (`{{ .ConfirmationURL }}`): `registrar` y `pedirRecuperacion` mandan `redirectTo` =
 `<origen de la petición>/auth/confirm`, y Supabase vuelve ahí con `?code=` PKCE (el enlace sólo

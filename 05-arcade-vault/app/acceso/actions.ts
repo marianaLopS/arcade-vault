@@ -125,14 +125,22 @@ export async function cerrarSesion(): Promise<void> {
   }
   redirect("/");
 }
-/** Origen de la petición (`http://localhost:3000` en desarrollo), para la vuelta del proveedor. */
+/**
+ * Orígenes a los que pueden volver los correos y OAuth, de `SITE_URLS` (separados
+ * por comas). El primero es el de reserva. Las cabeceras de la petición se pueden
+ * falsificar: un origen fuera de la lista mandaría el código del correo a otro sitio.
+ */
+const ORIGENES = (process.env.SITE_URLS ?? "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+/** Origen de la petición si está en `SITE_URLS`; si no, el primero de la lista. */
 async function origen(): Promise<string> {
   const h = await headers();
-  const origin = h.get("origin");
-  if (origin) return origin;
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const pedido = h.get("origin") ?? (host ? `${proto}://${host}` : null);
+  return pedido && ORIGENES.includes(pedido) ? pedido : ORIGENES[0];
 }
 /**
  * Inicia el flujo OAuth (PKCE) con Google o GitHub. El verificador PKCE queda
